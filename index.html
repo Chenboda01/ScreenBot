@@ -1393,40 +1393,40 @@ section + section { border-top: 1px solid var(--border); }
   /* ---- Build Status Polling ---- */
   var statusEl = document.getElementById('build-status');
   function updateBuildStatus() {
-    var latestSHA = null;
-    fetch('https://api.github.com/repos/Chenboda01/ScreenBot/commits/main?per_page=1')
-      .then(function(r) { return r.json(); })
-      .then(function(commit) {
-        latestSHA = commit[0].sha;
-        return fetch('https://api.github.com/repos/Chenboda01/ScreenBot/deployments?per_page=1');
+    fetch('https://api.github.com/repos/Chenboda01/ScreenBot/deployments?per_page=1')
+      .then(function(r) {
+        if (!r.ok) throw new Error('API ' + r.status);
+        return r.json();
       })
-      .then(function(r) { return r.json(); })
       .then(function(deployments) {
         if (!deployments.length) throw new Error('No deployments');
-        var dep = deployments[0];
-        return fetch(dep.statuses_url).then(function(r) { return r.json(); })
-          .then(function(statuses) {
-            if (!statuses.length) throw new Error('No statuses');
-            var st = statuses[0];
-            if (st.state === 'success' && dep.sha === latestSHA) {
-              statusEl.className = 'build-status deployed';
-              statusEl.innerHTML = '<span class="dot"></span>Build complete';
-              statusEl.title = 'All checks passed. Latest commit deployed.';
-            } else if (st.state === 'in_progress' || st.state === 'queued' || dep.sha !== latestSHA) {
-              statusEl.className = 'build-status building';
-              statusEl.innerHTML = '<span class="dot"></span>Building';
-              statusEl.title = 'GitHub Pages is building the latest commit...';
-            } else {
-              statusEl.className = 'build-status error';
-              statusEl.innerHTML = '<span class="dot"></span>Error';
-              statusEl.title = 'Deployment status: ' + st.state;
-            }
-          });
+        return fetch(deployments[0].statuses_url);
       })
-      .catch(function() {
+      .then(function(r) {
+        if (!r.ok) throw new Error('API ' + r.status);
+        return r.json();
+      })
+      .then(function(statuses) {
+        if (!statuses.length) throw new Error('No statuses');
+        var st = statuses[0];
+        if (st.state === 'success') {
+          statusEl.className = 'build-status deployed';
+          statusEl.innerHTML = '<span class="dot"></span>Build complete';
+          statusEl.title = 'Deployed: ' + new Date(st.created_at).toLocaleString();
+        } else if (st.state === 'in_progress' || st.state === 'queued') {
+          statusEl.className = 'build-status building';
+          statusEl.innerHTML = '<span class="dot"></span>Building';
+          statusEl.title = 'GitHub Pages is building the site...';
+        } else {
+          statusEl.className = 'build-status error';
+          statusEl.innerHTML = '<span class="dot"></span>Failed';
+          statusEl.title = 'Deployment status: ' + st.state;
+        }
+      })
+      .catch(function(e) {
         statusEl.className = 'build-status error';
         statusEl.innerHTML = '<span class="dot"></span>Offline';
-        statusEl.title = 'Could not reach GitHub API';
+        statusEl.title = e.message || 'Could not reach GitHub API';
       });
   }
   updateBuildStatus();
