@@ -212,11 +212,11 @@ section + section { border-top: 1px solid var(--border); }
 
 /* Theme Toggle */
 .theme-toggle {
-  background: none;
-  border: 1px solid var(--border);
+  background: var(--bg-card);
+  border: 1px solid var(--accent-dim);
   border-radius: 50%;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -231,6 +231,38 @@ section + section { border-top: 1px solid var(--border); }
 .theme-toggle .icon-moon { display: none; }
 [data-theme="light"] .theme-toggle .icon-sun { display: none; }
 [data-theme="light"] .theme-toggle .icon-moon { display: block; }
+
+/* Build Status Indicator */
+.build-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  margin-left: var(--space-sm);
+  flex-shrink: 0;
+  transition: var(--transition);
+  cursor: default;
+}
+.build-status .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.build-status.deployed { color: var(--secondary); border-color: rgba(0, 217, 154, 0.3); }
+.build-status.deployed .dot { background: var(--secondary); box-shadow: 0 0 6px rgba(0, 217, 154, 0.5); }
+.build-status.building { color: #f0a500; border-color: rgba(240, 165, 0, 0.3); }
+.build-status.building .dot { background: #f0a500; box-shadow: 0 0 6px rgba(240, 165, 0, 0.5); animation: pulse-dot 1.5s ease-in-out infinite; }
+.build-status.error { color: var(--pink); border-color: rgba(255, 0, 255, 0.3); }
+.build-status.error .dot { background: var(--pink); box-shadow: 0 0 6px rgba(255, 0, 255, 0.5); }
+@keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+@media (max-width: 768px) { .build-status { display: none; } }
 
 /* ============================================
    HERO
@@ -764,6 +796,90 @@ section + section { border-top: 1px solid var(--border); }
 .footer .mit { color: var(--text-secondary); }
 
 /* ============================================
+   ARCHITECTURE DIAGRAM
+   ============================================ */
+.arch-diagram {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-xl);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.85rem;
+  line-height: 1.8;
+  color: var(--text-secondary);
+  overflow-x: auto;
+  white-space: pre;
+  max-width: 600px;
+}
+.arch-diagram .hl { color: var(--accent); font-weight: 700; }
+.arch-diagram .dim { color: var(--text-muted); }
+
+.arch-caption {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.7;
+  max-width: 640px;
+  margin-top: var(--space-md);
+}
+
+/* ============================================
+   LIMITATIONS LIST
+   ============================================ */
+.limitations-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-width: 600px;
+}
+.limitations-list li {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: baseline;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.limitations-list .limit-icon {
+  color: var(--pink);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ============================================
+   FUTURE CARDS
+   ============================================ */
+.future-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+.future-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  transition: var(--transition);
+}
+.future-card:hover { background: var(--bg-card-hover); border-color: var(--accent-dim); }
+.future-card h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-xs);
+}
+.future-card p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+@media (max-width: 768px) { .future-grid { grid-template-columns: 1fr; } }
+
+/* ============================================
    MOBILE RESPONSIVE
    ============================================ */
 @media (max-width: 768px) {
@@ -832,11 +948,17 @@ section + section { border-top: 1px solid var(--border); }
       <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
       <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     </button>
+    <span class="build-status" id="build-status" title="Checking deployment status...">
+      <span class="dot"></span>...
+    </span>
     <ul class="nav-links">
       <li><a href="#features">Features</a></li>
       <li><a href="#install">Install</a></li>
       <li><a href="#usage">How to Use</a></li>
       <li><a href="#download">Download</a></li>
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="#limitations">Limitations</a></li>
+      <li><a href="#future">Future</a></li>
     </ul>
   </div>
 </nav>
@@ -927,6 +1049,9 @@ section + section { border-top: 1px solid var(--border); }
     <div class="tab-bar reveal">
       <button class="tab-btn active" data-tab="linux">Linux</button>
       <button class="tab-btn" data-tab="macos">macOS</button>
+      <button class="tab-btn" data-tab="waydroid">Waydroid</button>
+      <button class="tab-btn" data-tab="windows">Windows</button>
+      <button class="tab-btn" data-tab="bluestacks">BlueStacks</button>
     </div>
 
     <div class="tab-panel active" id="tab-linux">
@@ -963,6 +1088,73 @@ section + section { border-top: 1px solid var(--border); }
 
 <span class="comment"># Download Ollama from ollama.com, then:</span>
 <span class="cmd">ollama</span> pull <span class="pkg">llama3.2:1b</span>
+
+<span class="comment"># Launch the bot</span>
+<span class="cmd">python3</span> ScreenBot.py
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-waydroid">
+      <div class="code-block">
+        <button class="copy-btn">Copy</button>
+<span class="comment"># Waydroid runs Android inside Linux</span>
+<span class="comment"># Install Waydroid</span>
+<span class="cmd">sudo</span> pacman <span class="flag">-S</span> <span class="pkg">waydroid</span>
+
+<span class="comment"># Initialize</span>
+<span class="cmd">sudo</span> waydroid init
+
+<span class="comment"># Start the container</span>
+<span class="cmd">sudo</span> systemctl start waydroid-container
+<span class="cmd">waydroid</span> session start
+
+<span class="comment"># Launch Android UI</span>
+<span class="cmd">waydroid</span> show-full-ui
+
+<span class="comment"># Inside Android, install Python</span>
+<span class="cmd">pkg</span> install <span class="pkg">python</span>
+
+<span class="comment"># Copy ScreenBot into Waydroid</span>
+<span class="comment"># Then install dependencies</span>
+<span class="cmd">pip</span> install <span class="pkg">PyQt6 requests</span>
+
+<span class="comment"># Launch the bot</span>
+<span class="cmd">python3</span> ScreenBot.py
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-windows">
+      <div class="code-block">
+        <button class="copy-btn">Copy</button>
+<span class="comment"># Install Android Studio &amp; Android Emulator</span>
+<span class="comment"># Create a virtual Android device</span>
+
+<span class="comment"># Install Python inside the emulator</span>
+
+<span class="comment"># Copy ScreenBot project files</span>
+
+<span class="comment"># Install dependencies</span>
+<span class="cmd">pip</span> install <span class="pkg">PyQt6 requests</span>
+
+<span class="comment"># Note: Ollama runs on Windows host, not Android</span>
+<span class="comment"># The emulator connects to the host Ollama</span>
+<span class="cmd">python3</span> ScreenBot.py
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-bluestacks">
+      <div class="code-block">
+        <button class="copy-btn">Copy</button>
+<span class="comment"># Install BlueStacks on your PC</span>
+
+<span class="comment"># Install Python inside BlueStacks</span>
+
+<span class="comment"># Copy ScreenBot project files</span>
+
+<span class="comment"># Install dependencies</span>
+<span class="cmd">pip</span> install <span class="pkg">PyQt6 requests</span>
+
+<span class="comment"># Use the host PC's Ollama instance</span>
 
 <span class="comment"># Launch the bot</span>
 <span class="cmd">python3</span> ScreenBot.py
@@ -1006,6 +1198,59 @@ section + section { border-top: 1px solid var(--border); }
           <h4>Customize settings</h4>
           <p>In expanded mode, open Settings to change the theme, text color, background color, curiosity timeout, sleep timer, memory capacity, and thinking depth.</p>
         </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section id="architecture">
+  <div class="container">
+    <span class="section-label reveal">Architecture</span>
+    <h2 class="section-title reveal">How it fits together</h2>
+    <p class="section-desc reveal">ScreenBot connects your desktop to a local AI through a lightweight architecture.</p>
+    <div class="arch-diagram reveal"><span class="hl">Desktop Computer</span>
+<span class="dim">│</span>
+<span class="dim">├──</span> <span class="hl">Ollama</span> <span class="dim">← Local LLM (llama3.2:1b)</span>
+<span class="dim">│</span>
+<span class="dim">├──</span> <span class="hl">Git</span> <span class="dim">← Version control</span>
+<span class="dim">│</span>
+<span class="dim">└──</span> <span class="hl">Android Emulator</span> <span class="dim">← Waydroid / BlueStacks</span>
+     <span class="dim">│</span>
+     <span class="dim">└──</span> <span class="hl">ScreenBot</span> <span class="dim">← PyQt6 robot UI</span></div>
+    <p class="arch-caption reveal">The AI stays on your computer. The Android emulator only displays the robot. Ollama handles all LLM inference locally — no cloud required.</p>
+  </div>
+</section>
+
+<!-- LIMITATIONS -->
+<section id="limitations">
+  <div class="container">
+    <span class="section-label reveal">Limitations</span>
+    <h2 class="section-title reveal">Current constraints</h2>
+    <p class="section-desc reveal">ScreenBot is a desktop-first project. Here's what you should know.</p>
+    <ul class="limitations-list">
+      <li class="reveal"><span class="limit-icon">&#10007;</span> Not designed for Android phones</li>
+      <li class="reveal"><span class="limit-icon">&#10007;</span> Not designed for tablets</li>
+      <li class="reveal"><span class="limit-icon">&#10007;</span> PyQt6 is not officially supported on Android</li>
+      <li class="reveal"><span class="limit-icon">&#10007;</span> The robot may require a different GUI toolkit in the future</li>
+    </ul>
+  </div>
+</section>
+
+<!-- FUTURE -->
+<section id="future">
+  <div class="container">
+    <span class="section-label reveal">Future</span>
+    <h2 class="section-title reveal">What's coming next</h2>
+    <p class="section-desc reveal">The roadmap splits ScreenBot into two dedicated applications.</p>
+    <div class="future-grid">
+      <div class="future-card reveal">
+        <h3>ScreenBot Desktop</h3>
+        <p>Continues using PyQt6 for the full desktop experience. Native Linux &amp; macOS support with all current features — robot animations, memory, settings, and local AI via Ollama.</p>
+      </div>
+      <div class="future-card reveal">
+        <h3>ScreenBot Mobile</h3>
+        <p>Rewritten using a mobile framework such as Qt for Android or another suitable toolkit. Rather than trying to run desktop code unchanged, the mobile version will be built from the ground up for phones and tablets.</p>
       </div>
     </div>
   </div>
@@ -1144,6 +1389,43 @@ section + section { border-top: 1px solid var(--border); }
       localStorage.setItem('screenbot-theme', 'light');
     }
   });
+
+  /* ---- Build Status Polling ---- */
+  var statusEl = document.getElementById('build-status');
+  function updateBuildStatus() {
+    fetch('https://api.github.com/repos/Chenboda01/ScreenBot/deployments?per_page=1')
+      .then(function(r) { return r.json(); })
+      .then(function(deployments) {
+        if (!deployments.length) throw new Error('No deployments');
+        return fetch(deployments[0].statuses_url);
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(statuses) {
+        if (!statuses.length) throw new Error('No statuses');
+        var state = statuses[0].state;
+        statusEl.className = 'build-status';
+        if (state === 'success') {
+          statusEl.classList.add('deployed');
+          statusEl.innerHTML = '<span class="dot"></span>Live';
+          statusEl.title = 'Site deployed and up to date';
+        } else if (state === 'in_progress' || state === 'queued') {
+          statusEl.classList.add('building');
+          statusEl.innerHTML = '<span class="dot"></span>Building';
+          statusEl.title = 'GitHub Pages is building the site...';
+        } else {
+          statusEl.classList.add('error');
+          statusEl.innerHTML = '<span class="dot"></span>Error';
+          statusEl.title = 'Deployment status: ' + state;
+        }
+      })
+      .catch(function() {
+        statusEl.className = 'build-status error';
+        statusEl.innerHTML = '<span class="dot"></span>Offline';
+        statusEl.title = 'Could not reach GitHub API';
+      });
+  }
+  updateBuildStatus();
+  setInterval(updateBuildStatus, 45000);
 })();
 </script>
 </body>
