@@ -13,6 +13,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="ScreenBot — A Living AI Desktop Companion">
 <meta name="twitter:description" content="A local AI chatbot with a neon robot face that learns about you. Runs on Linux &amp; macOS. Powered by Ollama.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23020711'/><circle cx='16' cy='14' r='10' fill='none' stroke='%2300f7ff' stroke-width='2'/><circle cx='12' cy='12' r='2.5' fill='%2300f7ff'/><circle cx='20' cy='12' r='2.5' fill='%2300f7ff'/><line x1='12' y1='20' x2='20' y2='20' stroke='%2300d99a' stroke-width='2' stroke-linecap='round'/></svg>">
 <style>
 /* ============================================
    DESIGN SYSTEM — Dark by default, light via data-theme
@@ -259,10 +260,35 @@ section + section { border-top: 1px solid var(--border); }
 .build-status.deployed .dot { background: var(--secondary); box-shadow: 0 0 6px rgba(0, 217, 154, 0.5); }
 .build-status.building { color: #f0a500; border-color: rgba(240, 165, 0, 0.3); }
 .build-status.building .dot { background: #f0a500; box-shadow: 0 0 6px rgba(240, 165, 0, 0.5); animation: pulse-dot 1.5s ease-in-out infinite; }
+.build-status.building { animation: pulse-badge 2s ease-in-out infinite; }
 .build-status.error { color: var(--pink); border-color: rgba(255, 0, 255, 0.3); }
 .build-status.error .dot { background: var(--pink); box-shadow: 0 0 6px rgba(255, 0, 255, 0.5); }
 @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+@keyframes pulse-badge { 0%, 100% { box-shadow: 0 0 0 rgba(240, 165, 0, 0); } 50% { box-shadow: 0 0 12px rgba(240, 165, 0, 0.4); } }
 @media (max-width: 768px) { .build-status { display: none; } }
+
+/* Status toast */
+.status-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--secondary);
+  color: #020711;
+  padding: 10px 24px;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-weight: 700;
+  z-index: 200;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+  box-shadow: 0 4px 20px rgba(0, 217, 154, 0.4);
+}
+.status-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Active nav link */
+.nav-links a.active { color: var(--accent); }
 
 /* ============================================
    HERO
@@ -1390,47 +1416,106 @@ section + section { border-top: 1px solid var(--border); }
     }
   });
 
-  /* ---- Build Status Polling ---- */
+  /* ---- Build Status Polling (adaptive) ---- */
   var statusEl = document.getElementById('build-status');
+  var pollTimer = null;
+  var pollInterval = 150000;
+  var lastState = 'deployed';
+  var idleSince = Date.now();
+
+  function showToast(msg) {
+    var t = document.createElement('div');
+    t.className = 'status-toast';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    requestAnimationFrame(function() { t.classList.add('show'); });
+    setTimeout(function() { t.classList.remove('show'); }, 3500);
+    setTimeout(function() { t.remove(); }, 4000);
+  }
+
+  function setPollInterval(ms) {
+    if (pollInterval === ms) return;
+    pollInterval = ms;
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(updateBuildStatus, pollInterval);
+  }
+
   function updateBuildStatus() {
+    if (Date.now() - idleSince > 1800000) {
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+      return;
+    }
     fetch('https://api.github.com/repos/Chenboda01/ScreenBot/deployments?per_page=1')
-      .then(function(r) {
-        if (!r.ok) throw new Error('API ' + r.status);
-        return r.json();
-      })
+      .then(function(r) { if (!r.ok) throw new Error('API ' + r.status); return r.json(); })
       .then(function(deployments) {
         if (!deployments.length) throw new Error('No deployments');
         return fetch(deployments[0].statuses_url);
       })
-      .then(function(r) {
-        if (!r.ok) throw new Error('API ' + r.status);
-        return r.json();
-      })
+      .then(function(r) { if (!r.ok) throw new Error('API ' + r.status); return r.json(); })
       .then(function(statuses) {
         if (!statuses.length) throw new Error('No statuses');
         var st = statuses[0];
+        var newState;
         if (st.state === 'success') {
+          newState = 'deployed';
           statusEl.className = 'build-status deployed';
           statusEl.innerHTML = '<span class="dot"></span>Build complete';
           statusEl.title = 'Deployed: ' + new Date(st.created_at).toLocaleString();
         } else if (st.state === 'in_progress' || st.state === 'queued') {
+          newState = 'building';
           statusEl.className = 'build-status building';
           statusEl.innerHTML = '<span class="dot"></span>Building';
           statusEl.title = 'GitHub Pages is building the site...';
         } else {
+          newState = 'error';
           statusEl.className = 'build-status error';
           statusEl.innerHTML = '<span class="dot"></span>Failed';
           statusEl.title = 'Deployment status: ' + st.state;
         }
+        if (newState === 'deployed' && lastState === 'building') {
+          showToast('Deployment complete');
+        }
+        if (newState !== lastState) { idleSince = Date.now(); }
+        lastState = newState;
+        setPollInterval(newState === 'building' ? 10000 : 150000);
       })
       .catch(function(e) {
+        lastState = 'error';
         statusEl.className = 'build-status error';
         statusEl.innerHTML = '<span class="dot"></span>Offline';
         statusEl.title = e.message || 'Could not reach GitHub API';
       });
   }
+
   updateBuildStatus();
-  setInterval(updateBuildStatus, 150000);
+  pollTimer = setInterval(updateBuildStatus, pollInterval);
+
+  /* Reset idle timer on user activity */
+  ['scroll','click','keydown','mousemove'].forEach(function(ev) {
+    window.addEventListener(ev, function() { idleSince = Date.now(); }, { passive: true });
+  });
+
+  /* ---- Scroll Spy ---- */
+  var navLinksAll = document.querySelectorAll('.nav-links a');
+  var sections = [];
+  navLinksAll.forEach(function(link) {
+    var id = link.getAttribute('href');
+    if (id && id !== '#') {
+      var el = document.querySelector(id);
+      if (el) sections.push({ link: link, el: el });
+    }
+  });
+  function updateActiveNav() {
+    var scrollPos = window.pageYOffset + 120;
+    var active = null;
+    for (var i = sections.length - 1; i >= 0; i--) {
+      if (sections[i].el.offsetTop <= scrollPos) { active = sections[i]; break; }
+    }
+    navLinksAll.forEach(function(l) { l.classList.remove('active'); });
+    if (active) active.link.classList.add('active');
+  }
+  window.addEventListener('scroll', updateActiveNav, { passive: true });
+  updateActiveNav();
 })();
 </script>
 </body>
