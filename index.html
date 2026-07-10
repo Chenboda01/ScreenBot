@@ -533,6 +533,110 @@ section + section { border-top: 1px solid var(--border); }
 }
 
 /* ============================================
+   PREVIEW — Robot State Variants
+   ============================================ */
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-md);
+  margin-top: var(--space-xl);
+  text-align: center;
+}
+.preview-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg) var(--space-sm);
+  transition: var(--transition);
+}
+.preview-card:hover { border-color: var(--accent-dim); }
+.preview-card .robot-scene { margin: 0 auto 10px; transform: scale(0.85); transform-origin: center top; }
+.preview-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--accent);
+  margin-bottom: 2px;
+}
+.preview-desc {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* State: Thinking */
+.preview-thinking .robot-antenna {
+  background: #0099ff;
+  animation: antenna-think 1s ease-in-out infinite;
+}
+@keyframes antenna-think {
+  0%, 100% { background: var(--accent); }
+  50% { background: #0099ff; }
+}
+.preview-thinking .robot-antenna::before {
+  background: #0099ff;
+  box-shadow: 0 0 12px #0099ff, 0 0 24px rgba(0, 153, 255, 0.4);
+  animation: antenna-pulse 1s ease-in-out infinite;
+}
+.preview-thinking .robot-mouth {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: transparent; border: 3px solid var(--secondary);
+  box-shadow: none;
+}
+.preview-thinking .robot-scene { animation: tilt-r 3s ease-in-out infinite; }
+@keyframes tilt-r {
+  0%, 100% { transform: scale(0.85) rotate(0deg); }
+  50% { transform: scale(0.85) rotate(5deg); }
+}
+
+/* State: Happy */
+.preview-happy .robot-body { border-color: var(--pink); }
+.preview-happy .robot-mouth {
+  width: 30px; height: 11px; border-radius: 0 0 15px 15px;
+  background: transparent; border: 3px solid var(--pink);
+  border-top: none; box-shadow: none;
+}
+.preview-happy .robot-scene { animation: bounce 0.6s ease-in-out infinite; }
+@keyframes bounce {
+  0%, 100% { transform: scale(0.85) translateY(0); }
+  50% { transform: scale(0.85) translateY(-6px); }
+}
+
+/* State: Sleepy */
+.preview-sleepy .robot-eyes { gap: 20px; }
+.preview-sleepy .robot-eye { width: 6px; height: 16px; border-radius: 3px; animation: none; }
+.preview-sleepy .robot-eye::after { display: none; }
+.preview-sleepy .robot-mouth { width: 20px; }
+.preview-sleepy .robot-scene::after {
+  content: 'Z';
+  position: absolute;
+  top: 0; right: 10px;
+  font-family: var(--font);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+  animation: z-float 2s ease-in-out infinite;
+}
+@keyframes z-float {
+  0%, 100% { transform: translateY(0); opacity: 0.7; }
+  50% { transform: translateY(-8px); opacity: 1; }
+}
+
+/* State: Curious */
+.preview-curious .robot-eye { width: 18px; height: 18px; }
+.preview-curious .robot-scene { animation: tilt-l 4s ease-in-out infinite; }
+@keyframes tilt-l {
+  0%, 100% { transform: scale(0.85) rotate(0deg); }
+  50% { transform: scale(0.85) rotate(-4deg); }
+}
+@media (max-width: 768px) {
+  .preview-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .preview-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* ============================================
    SECTION HEADINGS
    ============================================ */
 .section-label {
@@ -979,6 +1083,7 @@ section + section { border-top: 1px solid var(--border); }
     </span>
     <ul class="nav-links">
       <li><a href="#features">Features</a></li>
+      <li><a href="#preview">Preview</a></li>
       <li><a href="#install">Install</a></li>
       <li><a href="#usage">How to Use</a></li>
       <li><a href="#download">Download</a></li>
@@ -1060,6 +1165,82 @@ section + section { border-top: 1px solid var(--border); }
         <span class="feature-icon" style="color: var(--pink);">&#x2618;</span>
         <h3>Linux &amp; macOS</h3>
         <p>Runs on any system with Python 3. Install via pip or your native package manager and go.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PREVIEW -->
+<section id="preview">
+  <div class="container">
+    <span class="section-label reveal">Preview</span>
+    <h2 class="section-title reveal">See the robot in action</h2>
+    <p class="section-desc reveal">ScreenBot has five distinct personality states. Each one changes the robot's face, animations, and behavior.</p>
+    <div class="preview-grid">
+      <div class="preview-card reveal">
+        <div class="robot-scene">
+          <div class="robot-antenna"></div>
+          <div class="robot-ear left"></div>
+          <div class="robot-ear right"></div>
+          <div class="robot-body"></div>
+          <div class="robot-face-glow"></div>
+          <div class="robot-eyes"><div class="robot-eye"></div><div class="robot-eye"></div></div>
+          <div class="robot-mouth"></div>
+        </div>
+        <div class="preview-label">Idle</div>
+        <div class="preview-desc">Default relaxed state</div>
+      </div>
+      <div class="preview-card preview-thinking reveal">
+        <div class="robot-scene">
+          <div class="robot-antenna"></div>
+          <div class="robot-ear left"></div>
+          <div class="robot-ear right"></div>
+          <div class="robot-body"></div>
+          <div class="robot-face-glow"></div>
+          <div class="robot-eyes"><div class="robot-eye"></div><div class="robot-eye"></div></div>
+          <div class="robot-mouth"></div>
+        </div>
+        <div class="preview-label">Thinking</div>
+        <div class="preview-desc">Processing your message</div>
+      </div>
+      <div class="preview-card preview-happy reveal">
+        <div class="robot-scene">
+          <div class="robot-antenna"></div>
+          <div class="robot-ear left"></div>
+          <div class="robot-ear right"></div>
+          <div class="robot-body"></div>
+          <div class="robot-face-glow"></div>
+          <div class="robot-eyes"><div class="robot-eye"></div><div class="robot-eye"></div></div>
+          <div class="robot-mouth"></div>
+        </div>
+        <div class="preview-label">Happy</div>
+        <div class="preview-desc">After a good interaction</div>
+      </div>
+      <div class="preview-card preview-sleepy reveal">
+        <div class="robot-scene">
+          <div class="robot-antenna"></div>
+          <div class="robot-ear left"></div>
+          <div class="robot-ear right"></div>
+          <div class="robot-body"></div>
+          <div class="robot-face-glow"></div>
+          <div class="robot-eyes"><div class="robot-eye"></div><div class="robot-eye"></div></div>
+          <div class="robot-mouth"></div>
+        </div>
+        <div class="preview-label">Sleepy</div>
+        <div class="preview-desc">Idle too long, dozing off</div>
+      </div>
+      <div class="preview-card preview-curious reveal">
+        <div class="robot-scene">
+          <div class="robot-antenna"></div>
+          <div class="robot-ear left"></div>
+          <div class="robot-ear right"></div>
+          <div class="robot-body"></div>
+          <div class="robot-face-glow"></div>
+          <div class="robot-eyes"><div class="robot-eye"></div><div class="robot-eye"></div></div>
+          <div class="robot-mouth"></div>
+        </div>
+        <div class="preview-label">Curious</div>
+        <div class="preview-desc">Watching your cursor</div>
       </div>
     </div>
   </div>
