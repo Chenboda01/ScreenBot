@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,9 +15,9 @@
 <meta name="twitter:description" content="A local AI chatbot with a neon robot face that learns about you. Runs on Linux &amp; macOS. Powered by Ollama.">
 <style>
 /* ============================================
-   DESIGN SYSTEM — Dark Neon
+   DESIGN SYSTEM — Dual Theme (Dark default)
    ============================================ */
-:root {
+[data-theme="dark"] {
   --bg-deep: #020711;
   --bg-card: #0a1628;
   --bg-card-hover: #0f1f3a;
@@ -32,6 +32,32 @@
   --text-primary: #e8f0ff;
   --text-secondary: #7a8fa8;
   --text-muted: #4a5a70;
+  --nav-bg: rgba(2, 7, 17, 0.85);
+  --code-bg: #030b1a;
+  --card-shadow: none;
+  --card-border: var(--border);
+}
+[data-theme="light"] {
+  --bg-deep: #f4f6ff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #eef0fa;
+  --border: #c8cdd8;
+  --accent: #0066cc;
+  --accent-dim: rgba(0, 102, 204, 0.10);
+  --accent-glow: rgba(0, 102, 204, 0.25);
+  --secondary: #00875a;
+  --secondary-dim: rgba(0, 135, 90, 0.10);
+  --pink: #cc0066;
+  --pink-dim: rgba(204, 0, 102, 0.08);
+  --text-primary: #1a1a2e;
+  --text-secondary: #4a5068;
+  --text-muted: #7a8098;
+  --nav-bg: rgba(244, 246, 255, 0.88);
+  --code-bg: #e8ecf4;
+  --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --card-border: #d8dce8;
+}
+:root {
   --space-xs: 4px;
   --space-sm: 8px;
   --space-md: 16px;
@@ -57,10 +83,20 @@ body {
   line-height: 1.6;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  transition: background 0.35s ease, color 0.35s ease;
 }
 
 a { color: var(--accent); text-decoration: none; transition: color var(--transition); }
-a:hover { color: #fff; }
+a:hover { color: var(--text-primary); }
+
+/* Smooth theme transitions on key elements */
+.section-title, .feature-card h3, .usage-text h4, .hero h1,
+.nav, .feature-card, .download-card, .code-block, .usage-item,
+section + section, .btn-primary, .btn-ghost, .btn-outline,
+.tab-btn, .tab-btn.active, .usage-num, .footer,
+.robot-body, .robot-face-glow, .robot-ear, .robot-antenna {
+  transition: background 0.35s ease, border-color 0.35s ease, color 0.35s ease, box-shadow 0.35s ease;
+}
 
 /* ============================================
    LAYOUT
@@ -120,7 +156,7 @@ section + section { border-top: 1px solid var(--border); }
   right: 0;
   z-index: 90;
   padding: var(--space-md) var(--space-lg);
-  background: rgba(2, 7, 17, 0.85);
+  background: var(--nav-bg);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
   transition: background var(--transition);
@@ -175,6 +211,29 @@ section + section { border-top: 1px solid var(--border); }
 .hamburger.active span:nth-child(2) { opacity: 0; }
 .hamburger.active span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
 
+/* Theme Toggle */
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  margin-left: var(--space-md);
+  flex-shrink: 0;
+}
+.theme-toggle:hover { border-color: var(--accent); }
+.theme-toggle svg { width: 16px; height: 16px; fill: none; stroke: var(--text-secondary); stroke-width: 2; stroke-linecap: round; transition: stroke var(--transition); }
+.theme-toggle:hover svg { stroke: var(--accent); }
+[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+[data-theme="light"] .theme-toggle .icon-sun { display: none; }
+[data-theme="light"] .theme-toggle .icon-moon { display: block; }
+
 /* ============================================
    HERO
    ============================================ */
@@ -221,7 +280,7 @@ section + section { border-top: 1px solid var(--border); }
   font-size: clamp(2.5rem, 7vw, 4.5rem);
   font-weight: 800;
   letter-spacing: -1px;
-  color: #fff;
+  color: var(--text-primary);
   margin-bottom: var(--space-sm);
 }
 .hero h1 .accent { color: var(--accent); }
@@ -268,7 +327,7 @@ section + section { border-top: 1px solid var(--border); }
   box-shadow: 0 0 20px rgba(0, 247, 255, 0.2);
 }
 .btn-primary:hover {
-  background: #fff;
+  background: var(--text-primary);
   color: var(--bg-deep);
   box-shadow: 0 0 30px rgba(0, 247, 255, 0.4);
 }
@@ -437,7 +496,7 @@ section + section { border-top: 1px solid var(--border); }
 .section-title {
   font-size: clamp(1.6rem, 4vw, 2.4rem);
   font-weight: 800;
-  color: #fff;
+  color: var(--text-primary);
   margin-bottom: var(--space-sm);
   letter-spacing: -0.5px;
 }
@@ -500,7 +559,7 @@ section + section { border-top: 1px solid var(--border); }
 .feature-card h3 {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-primary);
   margin-bottom: var(--space-xs);
 }
 
@@ -626,7 +685,7 @@ section + section { border-top: 1px solid var(--border); }
 
 .usage-text h4 {
   font-size: 0.95rem;
-  color: #fff;
+  color: var(--text-primary);
   margin-bottom: var(--space-xs);
   font-weight: 700;
 }
@@ -719,7 +778,7 @@ section + section { border-top: 1px solid var(--border); }
     left: 0;
     right: 0;
     flex-direction: column;
-    background: rgba(2, 7, 17, 0.96);
+    background: var(--nav-bg);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
     padding: var(--space-md) var(--space-lg);
@@ -770,6 +829,10 @@ section + section { border-top: 1px solid var(--border); }
     <a href="#" class="nav-logo">ScreenBot</a>
     <button class="hamburger" aria-label="Toggle navigation">
       <span></span><span></span><span></span>
+    </button>
+    <button class="theme-toggle" aria-label="Toggle light/dark theme" title="Toggle theme">
+      <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     </button>
     <ul class="nav-links">
       <li><a href="#features">Features</a></li>
@@ -1065,6 +1128,19 @@ section + section { border-top: 1px solid var(--border); }
         window.scrollTo({ top: top, behavior: 'smooth' });
       }
     });
+  }
+
+  /* ---- Theme Toggle ---- */
+  var themeToggle = document.querySelector('.theme-toggle');
+  var html = document.documentElement;
+  var saved = localStorage.getItem('screenbot-theme');
+  if (saved === 'light') { html.setAttribute('data-theme', 'light'); }
+  else if (saved === 'dark') { html.setAttribute('data-theme', 'dark'); }
+  themeToggle.addEventListener('click', function() {
+    var current = html.getAttribute('data-theme');
+    var next = current === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('screenbot-theme', next);
   });
 })();
 </script>
