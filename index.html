@@ -1397,7 +1397,7 @@ section + section { border-top: 1px solid var(--border); }
     fetch('https://api.github.com/repos/Chenboda01/ScreenBot/commits/main?per_page=1')
       .then(function(r) { return r.json(); })
       .then(function(commit) {
-        latestSHA = commit.sha;
+        latestSHA = commit[0].sha;
         return fetch('https://api.github.com/repos/Chenboda01/ScreenBot/deployments?per_page=1');
       })
       .then(function(r) { return r.json(); })
@@ -1408,18 +1408,14 @@ section + section { border-top: 1px solid var(--border); }
           .then(function(statuses) {
             if (!statuses.length) throw new Error('No statuses');
             var st = statuses[0];
-            if (st.state === 'in_progress' || st.state === 'queued') {
-              statusEl.className = 'build-status building';
-              statusEl.innerHTML = '<span class="dot"></span>Building';
-              statusEl.title = 'GitHub Pages is building the site...';
-            } else if (st.state === 'success' && dep.sha === latestSHA) {
+            if (st.state === 'success' && dep.sha === latestSHA) {
               statusEl.className = 'build-status deployed';
               statusEl.innerHTML = '<span class="dot"></span>Build complete';
               statusEl.title = 'All checks passed. Latest commit deployed.';
-            } else if (st.state === 'success' && dep.sha !== latestSHA) {
+            } else if (st.state === 'in_progress' || st.state === 'queued' || dep.sha !== latestSHA) {
               statusEl.className = 'build-status building';
-              statusEl.innerHTML = '<span class="dot"></span>Pending deploy';
-              statusEl.title = 'New commit detected. Waiting for Pages to build...';
+              statusEl.innerHTML = '<span class="dot"></span>Building';
+              statusEl.title = 'GitHub Pages is building the latest commit...';
             } else {
               statusEl.className = 'build-status error';
               statusEl.innerHTML = '<span class="dot"></span>Error';
