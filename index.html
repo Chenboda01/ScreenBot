@@ -1393,30 +1393,39 @@ section + section { border-top: 1px solid var(--border); }
   /* ---- Build Status Polling ---- */
   var statusEl = document.getElementById('build-status');
   function updateBuildStatus() {
-    fetch('https://api.github.com/repos/Chenboda01/ScreenBot/deployments?per_page=1')
+    var latestSHA = null;
+    fetch('https://api.github.com/repos/Chenboda01/ScreenBot/commits/main?per_page=1')
+      .then(function(r) { return r.json(); })
+      .then(function(commit) {
+        latestSHA = commit.sha;
+        return fetch('https://api.github.com/repos/Chenboda01/ScreenBot/deployments?per_page=1');
+      })
       .then(function(r) { return r.json(); })
       .then(function(deployments) {
         if (!deployments.length) throw new Error('No deployments');
-        return fetch(deployments[0].statuses_url);
-      })
-      .then(function(r) { return r.json(); })
-      .then(function(statuses) {
-        if (!statuses.length) throw new Error('No statuses');
-        var state = statuses[0].state;
-        statusEl.className = 'build-status';
-        if (state === 'success') {
-          statusEl.classList.add('deployed');
-          statusEl.innerHTML = '<span class="dot"></span>Live';
-          statusEl.title = 'Site deployed and up to date';
-        } else if (state === 'in_progress' || state === 'queued') {
-          statusEl.classList.add('building');
-          statusEl.innerHTML = '<span class="dot"></span>Building';
-          statusEl.title = 'GitHub Pages is building the site...';
-        } else {
-          statusEl.classList.add('error');
-          statusEl.innerHTML = '<span class="dot"></span>Error';
-          statusEl.title = 'Deployment status: ' + state;
-        }
+        var dep = deployments[0];
+        return fetch(dep.statuses_url).then(function(r) { return r.json(); })
+          .then(function(statuses) {
+            if (!statuses.length) throw new Error('No statuses');
+            var st = statuses[0];
+            if (st.state === 'in_progress' || st.state === 'queued') {
+              statusEl.className = 'build-status building';
+              statusEl.innerHTML = '<span class="dot"></span>Building';
+              statusEl.title = 'GitHub Pages is building the site...';
+            } else if (st.state === 'success' && dep.sha === latestSHA) {
+              statusEl.className = 'build-status deployed';
+              statusEl.innerHTML = '<span class="dot"></span>Build complete';
+              statusEl.title = 'All checks passed. Latest commit deployed.';
+            } else if (st.state === 'success' && dep.sha !== latestSHA) {
+              statusEl.className = 'build-status building';
+              statusEl.innerHTML = '<span class="dot"></span>Pending deploy';
+              statusEl.title = 'New commit detected. Waiting for Pages to build...';
+            } else {
+              statusEl.className = 'build-status error';
+              statusEl.innerHTML = '<span class="dot"></span>Error';
+              statusEl.title = 'Deployment status: ' + st.state;
+            }
+          });
       })
       .catch(function() {
         statusEl.className = 'build-status error';
