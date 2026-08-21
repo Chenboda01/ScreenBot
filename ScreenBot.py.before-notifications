@@ -4,7 +4,6 @@ import math
 import random
 import time
 import requests
-import subprocess
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, QRectF
@@ -24,7 +23,6 @@ from PyQt6.QtWidgets import (
 
 from bot.life import LifeEngine
 from bot.memory import ConversationMemory
-from world.movement import MovementEngine
 
 
 MODEL = "llama3.2:1b"
@@ -715,21 +713,18 @@ class ScreenBot(QWidget):
         self.worker = None
         self.settings_window = None
         self.current_reply = ""
-        self.autonomous_message = False
         self.idle_seconds = 0
         self.loading_step = 0
 
         self.life = LifeEngine()
         self.conversation = ConversationMemory()
-        self.movement = MovementEngine()
-        self.walking = False
 
         self.setWindowTitle(
             "ScreenBot 10"
         )
 
         self.setWindowFlags(
-            Qt.WindowType.Window
+            Qt.WindowType.Tool
         )
 
         self.robot = RobotWidget()
@@ -830,10 +825,6 @@ class ScreenBot(QWidget):
         )
 
         self.life_timer.start(1000)
-
-        self.move_timer = QTimer(self)
-        self.move_timer.timeout.connect(self.movement_loop)
-        self.move_timer.start(30)
 
         self.apply_theme()
         self.show_mini()
@@ -1204,32 +1195,6 @@ class ScreenBot(QWidget):
                 self.memory,
             )
 
-    def movement_loop(self):
-        if self.expanded or self.state in {"thinking", "speaking", "sleepy"}:
-            return
-
-        screen = self.screen() or QApplication.primaryScreen()
-        if screen is None:
-            return
-
-        area = screen.availableGeometry()
-
-        if not self.walking:
-            if True:
-                local_x = self.x() - area.x()
-                self.movement.choose_target(local_x, area.width(), self.width())
-                self.walking = True
-                self.set_state("curious")
-            return
-
-        local_x = self.x() - area.x()
-        new_x, done = self.movement.step(local_x)
-        self.move(area.x() + new_x, self.y())
-
-        if done:
-            self.walking = False
-            self.set_state("idle")
-
     def open_settings(self):
         if (
             self.settings_window
@@ -1318,7 +1283,8 @@ class ScreenBot(QWidget):
         ):
             return
 
-        self.autonomous_message = True
+        self.show_expanded()
+
         self.set_state("thinking")
 
         self.loading_step = 0
@@ -1439,11 +1405,6 @@ class ScreenBot(QWidget):
         self.chat.setTextCursor(cursor)
 
     def finish_reply(self, reply):
-        if self.autonomous_message and reply:
-            subprocess.run(["notify-send", "ScreenBot", reply], check=False)
-            self.autonomous_message = False
-            self.show_mini()
-
         self.set_state("happy")
 
         if reply:
