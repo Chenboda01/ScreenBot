@@ -16,9 +16,6 @@ class RobotWidget(QWidget):
         self.bounce = 0
         self.accent = "#00f7ff"
 
-        self.walking = False
-        self.walk_direction = 1
-
     def set_state(self, state):
         self.state = state
 
@@ -29,11 +26,6 @@ class RobotWidget(QWidget):
 
     def set_accent(self, color):
         self.accent = color
-        self.update()
-
-    def set_walking(self, walking, direction=1):
-        self.walking = walking
-        self.walk_direction = direction
         self.update()
 
     def tick(self):
@@ -69,31 +61,15 @@ class RobotWidget(QWidget):
             else 0
         )
 
-        walk_bob = 0
-
-        if self.walking:
-            walk_bob = abs(math.sin(self.t / 2.2)) * -5
-
-        tilt = 0
-
-        if self.walking:
-            tilt = 5 * self.walk_direction
-        elif self.state == "thinking":
-            tilt = 5
-        elif self.state == "curious":
-            tilt = -4
-
-        p.translate(
-            cx,
-            cy + breath + bounce_y + walk_bob,
+        tilt = (
+            5
+            if self.state == "thinking"
+            else (-4 if self.state == "curious" else 0)
         )
 
+        p.translate(cx, cy + breath + bounce_y)
         p.rotate(tilt)
-
-        p.translate(
-            -cx,
-            -cy,
-        )
+        p.translate(-cx, -cy)
 
         accent = QColor(self.accent)
         green = QColor("#00d99a")
@@ -111,7 +87,6 @@ class RobotWidget(QWidget):
             )
 
         p.setPen(QPen(antenna, 3))
-
         p.drawLine(
             int(cx),
             int(cy - 55),
@@ -120,7 +95,6 @@ class RobotWidget(QWidget):
         )
 
         p.setBrush(QBrush(antenna))
-
         p.drawEllipse(
             QRectF(
                 cx - 5,
@@ -246,7 +220,9 @@ class RobotWidget(QWidget):
 
         p.setPen(
             QPen(
-                pink if self.state == "happy" else accent,
+                pink
+                if self.state == "happy"
+                else accent,
                 2,
             )
         )
@@ -268,7 +244,9 @@ class RobotWidget(QWidget):
 
         p.setBrush(
             QBrush(
-                pink if self.state == "happy" else green
+                pink
+                if self.state == "happy"
+                else green
             )
         )
 
@@ -282,25 +260,6 @@ class RobotWidget(QWidget):
             5,
             5,
         )
-
-        if self.walking:
-            leg_swing = math.sin(self.t / 2.2) * 9
-
-            p.setPen(QPen(accent, 4))
-
-            p.drawLine(
-                int(cx - 18),
-                int(cy + 69),
-                int(cx - 18 + leg_swing),
-                int(cy + 84),
-            )
-
-            p.drawLine(
-                int(cx + 18),
-                int(cy + 69),
-                int(cx + 18 - leg_swing),
-                int(cy + 84),
-            )
 
         if self.state == "sleepy":
             p.resetTransform()
@@ -318,7 +277,8 @@ class RobotWidget(QWidget):
             p.drawText(
                 w - 42,
                 int(
-                    22 + math.sin(self.t / 8) * 5
+                    22
+                    + math.sin(self.t / 8) * 5
                 ),
                 "Z",
             )
