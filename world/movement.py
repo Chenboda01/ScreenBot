@@ -4,6 +4,7 @@ import random
 class MovementEngine:
     def __init__(self):
         self.target_x = None
+        self.target_y = None
         self.speed = 3
         self.direction = 1
 
@@ -21,6 +22,7 @@ class MovementEngine:
         target = max(0, min(max_x, target))
 
         self.target_x = target
+        self.target_y = None
 
         if target > current_x:
             self.direction = 1
@@ -29,22 +31,68 @@ class MovementEngine:
 
         return target
 
+    def set_target(self, target_x, target_y):
+        self.target_x = target_x
+        self.target_y = target_y
+
+    def clear_target(self):
+        self.target_x = None
+        self.target_y = None
+
     def step(self, current_x):
-        if self.target_x is None:
-            return current_x, True
+        new_x, _, done = self.step_to(
+            current_x,
+            0,
+        )
 
-        distance = self.target_x - current_x
+        return new_x, done
 
-        if abs(distance) <= self.speed:
-            current_x = self.target_x
-            self.target_x = None
-            return current_x, True
+    def step_to(self, current_x, current_y):
+        target_x = (
+            current_x
+            if self.target_x is None
+            else self.target_x
+        )
 
-        if distance > 0:
-            current_x += self.speed
+        target_y = (
+            current_y
+            if self.target_y is None
+            else self.target_y
+        )
+
+        new_x = self.step_axis(
+            current_x,
+            target_x,
+        )
+
+        new_y = self.step_axis(
+            current_y,
+            target_y,
+        )
+
+        done = (
+            new_x == target_x
+            and new_y == target_y
+        )
+
+        if done:
+            self.clear_target()
+
+        if new_x > current_x:
             self.direction = 1
-        else:
-            current_x -= self.speed
+
+        elif new_x < current_x:
             self.direction = -1
 
-        return current_x, False
+        return new_x, new_y, done
+
+    def step_axis(self, current, target):
+        distance = target - current
+
+        if abs(distance) <= self.speed:
+            return target
+
+        if distance > 0:
+            return current + self.speed
+
+        return current - self.speed
