@@ -642,11 +642,10 @@ class ScreenBot10(ScreenBot):
         ):
             return ScreenBot.show_expanded(self)
 
+        self.control_panel.hide()
+
         if self.parent() is self.walking_host:
             self.walking_host.detach_bob(self)
-
-        self.control_panel.hide()
-        self.walking_host.update_mask()
 
         self.setWindowFlags(
             Qt.WindowType.Window
