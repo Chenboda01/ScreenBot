@@ -34,6 +34,7 @@ jobs:
           cp latest.json updates/latest.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add updates
+          git add updates/latest.json updates/SHA256SUMS
+          git add -f "updates/screenbot-${GITHUB_REF_NAME}.zip"
           git commit -m "Publish ScreenBot ${GITHUB_REF_NAME} update" || exit 0
           git push origin screenbot-10
