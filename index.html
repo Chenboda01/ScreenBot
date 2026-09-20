@@ -1469,6 +1469,7 @@ section + section { border-top: 1px solid var(--border); }
     <span class="section-label reveal">Download</span>
     <h2 class="section-title reveal">Get ScreenBot</h2>
     <p class="section-desc reveal">Open source, MIT licensed, free forever.</p>
+    <span class="build-status deployed reveal" id="update-version" title="Checking latest update version..."><span class="dot"></span>Checking update</span>
 
     <div class="download-options">
       <div class="download-card reveal">
@@ -1670,6 +1671,18 @@ section + section { border-top: 1px solid var(--border); }
 
   updateBuildStatus();
   pollTimer = setInterval(updateBuildStatus, pollInterval);
+
+  var updateVersionEl = document.getElementById('update-version');
+  fetch('updates/latest.json')
+    .then(function(r) { if (!r.ok) throw new Error('Update manifest unavailable'); return r.json(); })
+    .then(function(update) {
+      updateVersionEl.innerHTML = '<span class="dot"></span>Latest update: ' + update.version;
+      updateVersionEl.title = 'ScreenBot update ' + update.version + ' is available from this site.';
+    })
+    .catch(function() {
+      updateVersionEl.className = 'build-status error reveal';
+      updateVersionEl.innerHTML = '<span class="dot"></span>Update status unavailable';
+    });
 
   /* Reset idle timer on user activity */
   ['scroll','click','keydown','mousemove'].forEach(function(ev) {
