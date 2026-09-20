@@ -609,6 +609,7 @@ class RobotWidget(QWidget):
 
 class SettingsWindow(QWidget):
     saved = pyqtSignal(dict)
+    check_updates_requested = pyqtSignal()
 
     def __init__(self, settings):
         super().__init__()
@@ -843,7 +844,13 @@ class SettingsWindow(QWidget):
             self.close
         )
 
+        check_updates_btn = QPushButton("CHECK FOR UPDATES")
+        check_updates_btn.clicked.connect(
+            self.check_updates_requested.emit
+        )
+
         form.addRow(save_btn)
+        form.addRow(check_updates_btn)
         form.addRow(close_btn)
 
     def save_settings(self):
@@ -1886,6 +1893,11 @@ class ScreenBot(QWidget):
         self.settings_window.saved.connect(
             self.settings_saved
         )
+
+        if hasattr(self, "check_for_updates"):
+            self.settings_window.check_updates_requested.connect(
+                self.check_for_updates
+            )
 
         self.settings_window.show()
 

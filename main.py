@@ -323,11 +323,23 @@ class UpdateProgressWindow(QWidget):
         self.bar = QProgressBar(self)
         self.bar.setGeometry(35, 80, 390, 28)
         self.bar.setRange(0, 100)
+        self.target_progress = 0
+        self.progress_timer = QTimer(self)
+        self.progress_timer.timeout.connect(self.advance_progress)
+        self.progress_timer.start(35)
 
     def set_progress(self, percent, text):
         self.status.setText(text)
-        self.bar.setValue(percent)
-        self.bar.setFormat(f"{percent}%")
+        self.target_progress = percent
+
+    def advance_progress(self):
+        current = self.bar.value()
+
+        if current >= self.target_progress:
+            return
+
+        self.bar.setValue(current + 1)
+        self.bar.setFormat(f"{current + 1}%")
 
 
 class ScreenBot10(ScreenBot):
@@ -364,6 +376,14 @@ class ScreenBot10(ScreenBot):
                 padding: 2px;
             }
             """
+        )
+
+        self.version_badge = QLabel(
+            f"v{Path(__file__).with_name('VERSION').read_text().strip()}",
+            self,
+        )
+        self.version_badge.setStyleSheet(
+            "QLabel { color:#00d99a; font-size:10px; font-weight:bold; }"
         )
 
         if hasattr(self, "move_timer"):
@@ -634,6 +654,10 @@ class ScreenBot10(ScreenBot):
         )
         self.brain_badge.show()
         self.brain_badge.raise_()
+
+        self.version_badge.setGeometry(655, 14, 80, 24)
+        self.version_badge.show()
+        self.version_badge.raise_()
 
         self.show()
         self.raise_()
