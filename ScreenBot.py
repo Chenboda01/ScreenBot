@@ -7,7 +7,7 @@ import requests
 import subprocess
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, QRectF
+from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, QRectF, QPoint
 from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QFont
 from PyQt6.QtWidgets import (
     QApplication,
@@ -19,11 +19,18 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QSpinBox,
     QFormLayout,
+    QInputDialog,
+    QListWidget,
+    QListWidgetItem,
+    QMenu,
     QMessageBox,
 )
 
+from bot.chats import ChatStore, suggested_title
 from bot.life import LifeEngine
+from bot.brain import HybridBrain
 from bot.memory import ConversationMemory
+from world.control_panel import SHAPES as PANEL_SHAPES
 from world.movement import MovementEngine
 
 
@@ -31,6 +38,7 @@ MODEL = "llama3.2:1b"
 
 MEMORY_FILE = Path.home() / "screenbot_memory.json"
 SETTINGS_FILE = Path.home() / "screenbot_settings.json"
+CHATS_FILE = Path.home() / ".screenbot_chats.json"
 
 
 DEFAULT_MEMORY = {
@@ -51,6 +59,12 @@ DEFAULT_SETTINGS = {
     "sleep_after": 10,
     "memory_level": "Normal",
     "thinking_level": "Medium",
+    "background_mode": "On",
+    "text_size": "Medium",
+    "panel_color": "Blue",
+    "bot_name": "Bob",
+    "panel_shape": "Circle",
+    "panel_auto_move": "On",
 }
 
 
@@ -81,6 +95,14 @@ MEMORY_LIMITS = {
 }
 
 
+TEXT_SIZES = {
+    "Small": 12,
+    "Medium": 14,
+    "Large": 17,
+    "Extra Large": 20,
+}
+
+
 THINKING_TEXT = {
     "Instant": "Answer quickly and briefly.",
     "Medium": "Think briefly, then answer clearly.",
@@ -100,8 +122,13 @@ def load_json(path, default):
             if isinstance(loaded, dict):
                 data.update(loaded)
 
-        except Exception:
-            pass
+        except (OSError, ValueError) as error:
+            print(
+                "[CONFIG] Could not read",
+                path.name,
+                "-",
+                error,
+            )
 
     return data
 
@@ -114,7 +141,14 @@ class StreamWorker(QThread):
     chunk = pyqtSignal(str)
     done = pyqtSignal(str)
 
-    def __init__(self, message, memory, settings, mode="chat", recent_conversation=""):
+    def __init__(
+        self,
+        message,
+        memory,
+        settings,
+        mode="chat",
+        recent_conversation="",
+    ):
         super().__init__()
 
         self.message = message
@@ -125,8 +159,12 @@ class StreamWorker(QThread):
 
     def run(self):
         facts = "\n".join(
-            f"- {x}" for x in self.memory.get("facts", [])
+            f"- {x}"
+            for x in self.memory.get("facts", [])
         )
+
+        if not facts:
+            facts = "- No saved facts yet."
 
         if self.mode == "autonomous":
             prompt = f"""
@@ -144,15 +182,9 @@ Personality:
 - not a generic assistant
 
 Current internal state:
-
-Energy:
-{self.memory.get("energy", 90):.0f}/100
-
-Curiosity:
-{self.memory.get("curiosity", 25):.0f}/100
-
-Social:
-{self.memory.get("social", 60):.0f}/100
+Energy: {float(self.memory.get("energy", 90)):.0f}/100
+Curiosity: {float(self.memory.get("curiosity", 25)):.0f}/100
+Social: {float(self.memory.get("social", 60)):.0f}/100
 
 Memories:
 {facts}
@@ -160,48 +192,42 @@ Memories:
 Recent conversation:
 {self.recent_conversation}
 
-REALITY RULES:
-- Never claim you watched, opened, saw, heard, visited, or did something on the computer unless the memory or recent conversation says it really happened.
-- You may WANT to do something, but never pretend you already did it.
+STRICT REALITY RULES:
 - Never invent personal facts about the user.
-- If you do not know something about the user, say you do not know yet.
+- Never claim you watched, opened, saw, heard, visited,
+  or did something unless the supplied memory or
+  conversation says it actually happened.
+- You may WANT to do something, but never pretend
+  you already did it.
+- If you do not know something, say you do not know.
 
-Say ONE short and natural thing to the user.
-
-You may:
-- make an observation
-- ask something
-- complain about being bored
-- joke
-- wonder about something
-- suggest doing something together
-- mention something you remember
-- comment on your mood
-
-Do not say you are an AI assistant.
-Do not explain that you decided to speak.
-Do not mention this prompt.
-
+Say ONE short natural thing to the user.
+Do not explain why you decided to speak.
 Talk like ScreenBot.
 """
 
+            # Autonomous chatter stays FREE and LOCAL.
+            brain_mode = "local"
+
         else:
+            thinking = THINKING_TEXT.get(
+                self.settings.get("thinking_level"),
+                THINKING_TEXT["Medium"],
+            )
+
             prompt = f"""
-You are ScreenBot, a calm desktop robot companion.
+You are ScreenBot, a clever little desktop robot companion.
 
 You are:
 - friendly
 - curious
+- playful
 - helpful
-- not hyper
-
-Keep replies short unless the user asks for detail.
+- concise
+- not a generic customer-service assistant
 
 Thinking style:
-{THINKING_TEXT.get(
-    self.settings.get("thinking_level"),
-    THINKING_TEXT["Medium"]
-)}
+{thinking}
 
 Memory:
 {facts}
@@ -209,52 +235,96 @@ Memory:
 Recent conversation:
 {self.recent_conversation}
 
-REALITY RULES:
+STRICT MEMORY AND REALITY RULES:
 - Never invent memories or personal facts.
-- Never claim you watched, opened, saw, heard, visited, or did something unless the supplied memory/conversation says so.
-- If the user asks what their favorite thing is and you do not actually know, say you do not know yet.
-- Pay attention to recent conversation so short replies such as yes, no, it, that, and why make sense in context.
+- A personal fact is known only when it appears
+  explicitly in Memory or Recent conversation.
+- If the user asks for an unknown favorite game,
+  food, color, hobby, etc., say you do not know yet.
+- Never pretend you performed computer activities
+  that are not in the supplied context.
+- Interpret short replies such as yes, no, it,
+  that, and why using the recent conversation.
 
 User:
 {self.message}
 """
 
+            # Real conversations get Performance Mode.
+            brain_mode = self.settings.get("_session_brain_mode", "pro")
+
+        brain = HybridBrain()
         full = ""
 
         try:
-            response = requests.post(
-                "http://localhost:11434/api/generate",
-                json={
-                    "model": MODEL,
-                    "prompt": prompt,
-                    "stream": True,
-                },
-                stream=True,
-                timeout=180,
-            )
-
-            response.raise_for_status()
-
-            for line in response.iter_lines():
-                if not line:
-                    continue
-
-                data = json.loads(line.decode("utf-8"))
-
-                piece = data.get("response", "")
-
+            for piece in brain.stream(
+                prompt,
+                mode=brain_mode,
+            ):
                 if piece:
                     full += piece
                     self.chunk.emit(piece)
 
-                if data.get("done"):
-                    break
+            print(
+                "[BRAIN]",
+                "⚡ PRO"
+                if brain.last_mode == "pro"
+                else "🏠 LOCAL",
+            )
 
-        except Exception:
-            full = "My local brain is offline. Make sure Ollama is running."
+        except Exception as error:  # noqa: BROAD_EXCEPT_OK
+            print(
+                "[BRAIN] Complete brain failure:",
+                error,
+            )
+
+            full = (
+                "My brain is having trouble right now."
+            )
+
             self.chunk.emit(full)
 
         self.done.emit(full.strip())
+
+
+class TitleWorker(QThread):
+    done = pyqtSignal(str)
+
+    def __init__(self, message, settings):
+        super().__init__()
+
+        self.message = message
+        self.settings = settings
+
+    def run(self):
+        prompt = (
+            "Write a short title for this conversation.\n"
+            "Rules:\n"
+            "- at most 6 words\n"
+            "- capitalize company names, product names, proper nouns,"
+            " and acronyms, for example Google, Slides, iPhone, Python\n"
+            "- use correct grammar and spelling\n"
+            "- return only the title, with no quotes and no final period\n\n"
+            f"First message:\n{self.message}\n"
+        )
+
+        brain = HybridBrain()
+        mode = self.settings.get("_session_brain_mode", "local")
+        title = ""
+
+        try:
+            for piece in brain.stream(prompt, mode=mode):
+                title += piece
+
+        except (
+            requests.RequestException,
+            ValueError,
+            KeyError,
+            TypeError,
+        ) as error:
+            print("[TITLE] Brain title failed:", error)
+
+        self.done.emit(title.strip())
 
 
 class RobotWidget(QWidget):
@@ -550,7 +620,7 @@ class SettingsWindow(QWidget):
 
         self.setFixedSize(
             390,
-            430,
+            660,
         )
 
         form = QFormLayout(self)
@@ -620,6 +690,70 @@ class SettingsWindow(QWidget):
             settings["thinking_level"]
         )
 
+        self.background_mode = QComboBox()
+        self.background_mode.addItems(
+            ["On", "Off"]
+        )
+
+        self.background_mode.setCurrentText(
+            settings.get(
+                "background_mode",
+                "On",
+            )
+        )
+
+        self.text_size = QComboBox()
+        self.text_size.addItems(
+            TEXT_SIZES.keys()
+        )
+
+        self.text_size.setCurrentText(
+            settings.get(
+                "text_size",
+                "Medium",
+            )
+        )
+
+        self.panel_color = QComboBox()
+        self.panel_color.addItems(
+            ACCENTS.keys()
+        )
+
+        self.panel_color.setCurrentText(
+            settings.get(
+                "panel_color",
+                "Blue",
+            )
+        )
+
+        self.bot_name = QLineEdit(
+            settings.get("bot_name", "Bob")
+        )
+
+        self.panel_shape = QComboBox()
+        self.panel_shape.addItems(
+            PANEL_SHAPES.keys()
+        )
+
+        self.panel_shape.setCurrentText(
+            settings.get(
+                "panel_shape",
+                "Circle",
+            )
+        )
+
+        self.panel_auto_move = QComboBox()
+        self.panel_auto_move.addItems(
+            ["On", "Off"]
+        )
+
+        self.panel_auto_move.setCurrentText(
+            settings.get(
+                "panel_auto_move",
+                "On",
+            )
+        )
+
         form.addRow(
             "Theme:",
             self.theme,
@@ -655,6 +789,36 @@ class SettingsWindow(QWidget):
             self.thinking,
         )
 
+        form.addRow(
+            "Background mode:",
+            self.background_mode,
+        )
+
+        form.addRow(
+            "Text size:",
+            self.text_size,
+        )
+
+        form.addRow(
+            "Panel color:",
+            self.panel_color,
+        )
+
+        form.addRow(
+            "Name:",
+            self.bot_name,
+        )
+
+        form.addRow(
+            "Button shape:",
+            self.panel_shape,
+        )
+
+        form.addRow(
+            "Auto move:",
+            self.panel_auto_move,
+        )
+
         save_btn = QPushButton("SAVE")
         close_btn = QPushButton("CLOSE")
 
@@ -678,6 +842,12 @@ class SettingsWindow(QWidget):
             "sleep_after": self.sleep.value(),
             "memory_level": self.memory.currentText(),
             "thinking_level": self.thinking.currentText(),
+            "background_mode": self.background_mode.currentText(),
+            "text_size": self.text_size.currentText(),
+            "panel_color": self.panel_color.currentText(),
+            "bot_name": self.bot_name.text().strip() or "Bob",
+            "panel_shape": self.panel_shape.currentText(),
+            "panel_auto_move": self.panel_auto_move.currentText(),
         }
 
         save_json(
@@ -815,6 +985,68 @@ class ScreenBot(QWidget):
             Qt.AlignmentFlag.AlignCenter
         )
 
+        self.chats = ChatStore(CHATS_FILE)
+        self.title_worker = None
+
+        self.new_chat_btn = QPushButton(
+            "＋  New chat",
+            self,
+        )
+
+        self.new_chat_btn.clicked.connect(
+            self.start_new_chat
+        )
+
+        self.chat_search = QLineEdit(self)
+
+        self.chat_search.setPlaceholderText(
+            "Search chats"
+        )
+
+        self.chat_search.textChanged.connect(
+            self.refresh_chat_list
+        )
+
+        self.chat_list = QListWidget(self)
+
+        self.chat_list.itemClicked.connect(
+            self.on_chat_clicked
+        )
+
+        self.chat_list.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+
+        self.chat_list.customContextMenuRequested.connect(
+            self.open_chat_menu_at
+        )
+
+        self.rename_btn = QPushButton(
+            "⋯   Rename",
+            self,
+        )
+
+        self.rename_btn.clicked.connect(
+            lambda: self.open_chat_menu()
+        )
+
+        self.thinking_picker = QComboBox(self)
+
+        self.thinking_picker.addItems(
+            THINKING_TEXT.keys()
+        )
+
+        self.thinking_picker.setCurrentText(
+            self.settings.get(
+                "thinking_level",
+                "Medium",
+            )
+        )
+
+        self.thinking_picker.currentTextChanged.connect(
+            self.thinking_changed
+        )
+
         self.anim_timer = QTimer(self)
 
         self.anim_timer.timeout.connect(
@@ -849,6 +1081,11 @@ class ScreenBot(QWidget):
             "#00f7ff",
         )
 
+        text_size = TEXT_SIZES.get(
+            self.settings.get("text_size", "Medium"),
+            TEXT_SIZES["Medium"],
+        )
+
         if self.settings["theme"] == "Light":
             bg = "#f4f6ff"
 
@@ -860,6 +1097,7 @@ class ScreenBot(QWidget):
                 background:{bg};
                 color:{accent};
                 font-family:Arial;
+                font-size:{text_size}px;
             }}
 
             QLineEdit, QTextEdit {{
@@ -868,6 +1106,23 @@ class ScreenBot(QWidget):
                 border:2px solid {accent};
                 border-radius:12px;
                 padding:8px;
+            }}
+
+            QListWidget, QComboBox {{
+                background:#071326;
+                color:white;
+                border:2px solid {accent};
+                border-radius:12px;
+                padding:4px;
+            }}
+
+            QListWidget::item {{
+                padding:6px;
+            }}
+
+            QListWidget::item:selected {{
+                background:{accent};
+                color:#020711;
             }}
 
             QPushButton {{
@@ -888,7 +1143,7 @@ class ScreenBot(QWidget):
 
         self.mood.setStyleSheet(
             f"""
-            font-size:18px;
+            font-size:{text_size + 4}px;
             font-weight:bold;
             color:{accent};
             """
@@ -896,13 +1151,16 @@ class ScreenBot(QWidget):
 
         self.loading.setStyleSheet(
             f"""
-            font-size:14px;
+            font-size:{text_size}px;
             font-weight:bold;
             color:{accent};
             """
         )
 
     def show_mini(self):
+        if getattr(self, "background_mode", False):
+            return
+
         self.expanded = False
 
         self.setFixedSize(
@@ -933,87 +1191,132 @@ class ScreenBot(QWidget):
             self.mini_btn,
             self.exit_btn,
             self.loading,
+            *self.expanded_only_widgets(),
         ]:
             widget.hide()
 
         self.robot.show()
         self.mood.show()
 
+    def expanded_only_widgets(self):
+        return [
+            self.new_chat_btn,
+            self.chat_search,
+            self.chat_list,
+            self.rename_btn,
+            self.thinking_picker,
+        ]
+
     def show_expanded(self):
         self.expanded = True
 
         self.setFixedSize(
-            520,
+            760,
             670,
         )
 
         self.exit_btn.setGeometry(
-            470,
+            713,
             12,
             35,
             30,
         )
 
+        self.new_chat_btn.setGeometry(
+            12,
+            12,
+            196,
+            34,
+        )
+
+        self.chat_search.setGeometry(
+            12,
+            54,
+            196,
+            30,
+        )
+
+        self.chat_list.setGeometry(
+            12,
+            92,
+            196,
+            470,
+        )
+
+        self.rename_btn.setGeometry(
+            12,
+            570,
+            196,
+            30,
+        )
+
         self.robot.setGeometry(
-            165,
+            395,
             35,
             190,
             150,
         )
 
         self.mood.setGeometry(
-            150,
+            380,
             188,
             220,
             28,
         )
 
         self.loading.setGeometry(
-            150,
+            380,
             218,
             220,
             24,
         )
 
         self.chat.setGeometry(
-            25,
+            245,
             255,
-            470,
+            490,
             265,
         )
 
         self.input.setGeometry(
-            25,
+            245,
             535,
-            350,
+            270,
+            42,
+        )
+
+        self.thinking_picker.setGeometry(
+            520,
+            535,
+            110,
             42,
         )
 
         self.send_btn.setGeometry(
-            390,
+            640,
             535,
-            105,
+            95,
             42,
         )
 
         self.settings_btn.setGeometry(
-            25,
+            245,
             600,
-            145,
+            150,
             36,
         )
 
         self.sleep_btn.setGeometry(
-            188,
+            412,
             600,
-            145,
+            150,
             36,
         )
 
         self.mini_btn.setGeometry(
-            350,
+            579,
             600,
-            145,
+            150,
             36,
         )
 
@@ -1027,14 +1330,294 @@ class ScreenBot(QWidget):
             self.sleep_btn,
             self.mini_btn,
             self.exit_btn,
+            *self.expanded_only_widgets(),
         ]:
             widget.show()
+
+        self.refresh_chat_list()
+
+        if not self.current_reply:
+            self.load_active_conversation()
+            self.render_active_chat()
 
         self.loading.setVisible(
             self.state == "thinking"
         )
 
         self.input.setFocus()
+
+    def active_chat(self):
+        return self.chats.active()
+
+    def ensure_active_chat(self):
+        chat = self.chats.active()
+
+        if chat is None:
+            chat = self.chats.new_chat()
+            self.refresh_chat_list()
+
+        return chat
+
+    def start_new_chat(self):
+        self.chats.new_chat()
+        self.load_active_conversation()
+        self.render_active_chat()
+        self.refresh_chat_list()
+
+        if self.expanded:
+            self.input.setFocus()
+
+    def on_chat_clicked(self, item):
+        chat_id = item.data(
+            Qt.ItemDataRole.UserRole
+        )
+
+        if self.chats.select(chat_id) is None:
+            return
+
+        self.load_active_conversation()
+        self.render_active_chat()
+        self.refresh_chat_list()
+
+        if self.expanded:
+            self.input.setFocus()
+
+    def refresh_chat_list(self):
+        self.chat_list.clear()
+
+        for chat in self.chats.search(
+            self.chat_search.text()
+        ):
+            item = QListWidgetItem(chat["title"])
+
+            item.setData(
+                Qt.ItemDataRole.UserRole,
+                chat["id"],
+            )
+
+            self.chat_list.addItem(item)
+
+            if chat["id"] == self.chats.active_id:
+                self.chat_list.setCurrentItem(item)
+
+    def open_chat_menu_at(self, position):
+        item = self.chat_list.itemAt(position)
+
+        if item is not None:
+            self.open_chat_menu(item)
+
+    def open_chat_menu(self, item=None):
+        target = (
+            item
+            if isinstance(item, QListWidgetItem)
+            else self.chat_list.currentItem()
+        )
+
+        if target is None:
+            return
+
+        menu = QMenu(self)
+        rename_action = menu.addAction("Rename")
+        delete_action = menu.addAction("Delete")
+
+        chosen = menu.exec(
+            self.rename_btn.mapToGlobal(
+                QPoint(0, self.rename_btn.height())
+            )
+        )
+
+        if chosen is None:
+            return
+
+        chat_id = target.data(
+            Qt.ItemDataRole.UserRole
+        )
+
+        if chosen.text() == rename_action.text():
+            self.rename_chat(chat_id)
+
+        elif chosen.text() == delete_action.text():
+            self.delete_chat(chat_id)
+
+    def delete_chat(self, chat_id):
+        chat = self.chats.get(chat_id)
+
+        if chat is None:
+            return
+
+        answer = QMessageBox.question(
+            self,
+            "Delete chat",
+            f"Delete \"{chat['title']}\"?",
+            (
+                QMessageBox.StandardButton.Yes
+                | QMessageBox.StandardButton.No
+            ),
+            QMessageBox.StandardButton.No,
+        )
+
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+
+        if not self.chats.delete(chat_id):
+            return
+
+        self.load_active_conversation()
+        self.render_active_chat()
+        self.refresh_chat_list()
+
+    def rename_chat(self, chat_id):
+        chat = self.chats.get(chat_id)
+
+        if chat is None:
+            return
+
+        title, accepted = QInputDialog.getText(
+            self,
+            "Rename chat",
+            "Chat name:",
+            text=chat["title"],
+        )
+
+        if not accepted:
+            return
+
+        self.chats.rename(chat_id, title)
+        self.refresh_chat_list()
+
+    def load_active_conversation(self):
+        self.conversation = ConversationMemory()
+        chat = self.chats.active()
+
+        if chat is None:
+            return
+
+        for message in chat["messages"]:
+            if message["role"] == "user":
+                self.conversation.add_user(
+                    message["text"]
+                )
+            else:
+                self.conversation.add_screenbot(
+                    message["text"]
+                )
+
+    def bot_name(self):
+        return self.settings.get("bot_name", "Bob")
+
+    def render_active_chat(self):
+        self.chat.clear()
+        chat = self.chats.active()
+
+        if chat is None:
+            return
+
+        for message in chat["messages"]:
+            speaker = (
+                "You"
+                if message["role"] == "user"
+                else self.bot_name()
+            )
+
+            self.chat.append(
+                f"<b>{speaker}:</b> {message['text']}"
+            )
+
+        self.chat.append("")
+
+    def store_message(self, role, text):
+        chat = self.ensure_active_chat()
+
+        self.chats.append(chat["id"], role, text)
+        self.refresh_chat_list()
+
+        return chat
+
+    def maybe_refine_title(self):
+        chat = self.chats.active()
+
+        if chat is None or chat["renamed"]:
+            return
+
+        if len(chat["messages"]) != 2:
+            return
+
+        first_user = ""
+
+        for message in chat["messages"]:
+            if message["role"] == "user":
+                first_user = message["text"]
+                break
+
+        if not first_user:
+            return
+
+        chat_id = chat["id"]
+
+        self.title_worker = TitleWorker(
+            first_user,
+            self.settings,
+        )
+
+        self.title_worker.done.connect(
+            lambda title, target=chat_id: (
+                self.apply_brain_title(target, title)
+            )
+        )
+
+        self.title_worker.start()
+
+    def apply_brain_title(self, chat_id, title):
+        if self.chats.auto_title(chat_id, title) is None:
+            return
+
+        self.refresh_chat_list()
+
+    def thinking_changed(self, level):
+        if level == self.settings.get("thinking_level"):
+            return
+
+        self.settings["thinking_level"] = level
+
+        save_json(
+            SETTINGS_FILE,
+            self.settings_for_disk(),
+        )
+
+    def settings_for_disk(self):
+        return {
+            "theme": self.settings["theme"],
+            "background": self.settings["background"],
+            "text_color": self.settings["text_color"],
+            "curious_after": self.settings["curious_after"],
+            "sleep_after": self.settings["sleep_after"],
+            "memory_level": self.settings["memory_level"],
+            "thinking_level": self.settings["thinking_level"],
+            "background_mode": self.settings.get(
+                "background_mode",
+                "On",
+            ),
+            "text_size": self.settings.get(
+                "text_size",
+                "Medium",
+            ),
+            "panel_color": self.settings.get(
+                "panel_color",
+                "Blue",
+            ),
+            "bot_name": self.settings.get(
+                "bot_name",
+                "Bob",
+            ),
+            "panel_shape": self.settings.get(
+                "panel_shape",
+                "Circle",
+            ),
+            "panel_auto_move": self.settings.get(
+                "panel_auto_move",
+                "On",
+            ),
+        }
 
     def toggle_mode(self):
         if self.expanded:
@@ -1250,7 +1833,24 @@ class ScreenBot(QWidget):
         self.settings_window.show()
 
     def settings_saved(self, settings):
+        session_mode = self.settings.get(
+            "_session_brain_mode"
+        )
+
         self.settings = settings
+
+        if session_mode is not None:
+            self.settings["_session_brain_mode"] = (
+                session_mode
+            )
+
+        self.thinking_picker.setCurrentText(
+            self.settings.get(
+                "thinking_level",
+                "Medium",
+            )
+        )
+
         self.apply_theme()
 
     def learn_fact(self, text):
@@ -1325,7 +1925,7 @@ class ScreenBot(QWidget):
         self.current_reply = ""
 
         self.chat.append(
-            "<br><b>ScreenBot:</b> "
+            f"<br><b>{self.bot_name()}:</b> "
         )
 
         self.worker = StreamWorker(
@@ -1366,6 +1966,17 @@ class ScreenBot(QWidget):
 
         self.conversation.add_user(message)
 
+        chat = self.ensure_active_chat()
+        self.chats.append(chat["id"], "user", message)
+
+        if not chat["renamed"] and len(chat["messages"]) == 1:
+            self.chats.auto_title(
+                chat["id"],
+                suggested_title(message),
+            )
+
+        self.refresh_chat_list()
+
         self.memory["conversation_count"] = (
             int(
                 self.memory.get(
@@ -1384,7 +1995,12 @@ class ScreenBot(QWidget):
 
         if self.learn_fact(message):
             self.chat.append(
-                "<b>ScreenBot:</b> I will remember that."
+                f"<b>{self.bot_name()}:</b> I will remember that."
+            )
+
+            self.store_message(
+                "screenbot",
+                "I will remember that.",
             )
 
             self.set_state("happy")
@@ -1401,7 +2017,7 @@ class ScreenBot(QWidget):
         self.current_reply = ""
 
         self.chat.append(
-            "<b>ScreenBot:</b> "
+            f"<b>{self.bot_name()}:</b> "
         )
 
         self.worker = StreamWorker(
@@ -1439,7 +2055,9 @@ class ScreenBot(QWidget):
         self.chat.setTextCursor(cursor)
 
     def finish_reply(self, reply):
-        if self.autonomous_message and reply:
+        autonomous = self.autonomous_message
+
+        if autonomous and reply:
             subprocess.run(["notify-send", "ScreenBot", reply], check=False)
             self.autonomous_message = False
             self.show_mini()
@@ -1448,6 +2066,14 @@ class ScreenBot(QWidget):
 
         if reply:
             self.conversation.add_screenbot(reply)
+
+            if not autonomous:
+                self.store_message(
+                    "screenbot",
+                    reply,
+                )
+
+                self.maybe_refine_title()
 
         self.current_reply = ""
 
