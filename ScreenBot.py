@@ -1362,21 +1362,28 @@ class ScreenBot(QWidget):
         self.settings_btn.setGeometry(
             245,
             600,
-            150,
+            110,
             36,
         )
 
         self.sleep_btn.setGeometry(
-            412,
+            365,
             600,
-            150,
+            110,
             36,
         )
 
         self.mini_btn.setGeometry(
-            579,
+            485,
             600,
-            150,
+            110,
+            36,
+        )
+
+        self.exit_btn.setGeometry(
+            605,
+            600,
+            110,
             36,
         )
 
