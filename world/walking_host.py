@@ -83,7 +83,7 @@ class WalkingHost(QWidget):
         rects = []
 
         for widget in (self.bob, self.panel):
-            if widget is None:
+            if widget is None or not widget.isVisible():
                 continue
 
             rects.append(
