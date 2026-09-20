@@ -113,24 +113,31 @@ class ControlPanel(QWidget):
             QPainter.RenderHint.Antialiasing
         )
 
-        painter.setBrush(
-            QBrush(QColor(2, 7, 17, 215))
-        )
-
-        painter.setPen(
-            QPen(QColor(self.accent), 2)
-        )
-
         rect = self.button_rect()
+        render_shape = self.shape_renderer(painter)
+        glow = QColor(self.accent)
+        glow.setAlpha(55)
 
-        self.shape_renderer(painter)(rect)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.setPen(QPen(glow, 7))
+        render_shape(rect)
+
+        painter.setBrush(
+            QBrush(QColor(2, 7, 17, 230))
+        )
+        painter.setPen(QPen(QColor("#75fbff"), 1))
+        render_shape(rect.adjusted(2, 2, -2, -2))
+
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.setPen(QPen(QColor(self.accent), 2))
+        render_shape(rect)
 
         font = painter.font()
         font.setPointSize(11)
         font.setBold(True)
 
         painter.setFont(font)
-        painter.setPen(QPen(QColor(self.accent)))
+        painter.setPen(QPen(QColor("#d8feff")))
 
         text_rect = (
             rect.adjusted(0, 8, 0, 0)
@@ -143,6 +150,17 @@ class ControlPanel(QWidget):
             Qt.AlignmentFlag.AlignCenter,
             "•••",
         )
+
+        painter.setBrush(QBrush(QColor(self.accent)))
+        painter.setPen(Qt.PenStyle.NoPen)
+
+        for offset in (-7, 0, 7):
+            painter.drawEllipse(
+                rect.center().x() + offset - 1,
+                rect.top() + 5,
+                3,
+                3,
+            )
 
     def start_drag(self, global_pos):
         self.dragging = False
@@ -214,15 +232,27 @@ class ControlPanel(QWidget):
 
     def open_menu(self):
         menu = QMenu(self)
+        menu.setStyleSheet(
+            "QMenu { background:#020711; color:#d8feff;"
+            " border:2px solid #00f7ff; border-radius:10px;"
+            " padding:8px; font-weight:bold; }"
+            "QMenu::item { background:#071326; border:1px solid #0d4d66;"
+            " border-radius:6px; margin:3px 0; padding:8px 24px 8px 10px; }"
+            "QMenu::item:selected { background:#00f7ff; color:#020711;"
+            " border-color:#d8feff; }"
+            "QMenu::item:disabled { background:transparent; color:#00f7ff;"
+            " border:0; padding:4px 4px 8px 4px; }"
+            "QMenu::separator { height:1px; background:#0d4d66; margin:5px 0; }"
+        )
 
-        title = menu.addAction(self.name)
+        title = menu.addAction(f"{self.name.upper()} CONTROL CENTER")
         title.setEnabled(False)
 
         menu.addSeparator()
 
-        sleep_action = menu.addAction("Sleep")
-        idle_action = menu.addAction("Idle")
-        big_action = menu.addAction("Big")
+        sleep_action = menu.addAction("SLEEP MODE")
+        idle_action = menu.addAction("IDLE MODE")
+        big_action = menu.addAction("EXPAND SCREENBOT")
 
         chosen = menu.exec(
             self.mapToGlobal(
