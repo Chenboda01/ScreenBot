@@ -477,17 +477,21 @@ class ScreenBot10(ScreenBot):
             else "🏠 LOCAL",
         )
 
-    def check_for_updates(self):
+    def manual_check_for_updates(self):
+        self.check_for_updates(manual=True)
+
+    def check_for_updates(self, manual=False):
         if self.brain_mode != "pro":
             return
 
         if self.update_worker is not None and self.update_worker.isRunning():
             return
 
-        subprocess.run(
-            ["notify-send", "ScreenBot", "Checking for updates..."],
-            check=False,
-        )
+        if manual:
+            subprocess.run(
+                ["notify-send", "ScreenBot", "Checking for updates..."],
+                check=False,
+            )
         self.update_worker = UpdateCheckWorker(self.current_version)
         self.update_worker.available.connect(self.offer_update)
         self.update_worker.start()

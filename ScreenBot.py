@@ -1903,7 +1903,7 @@ class ScreenBot(QWidget):
 
         if hasattr(self, "check_for_updates"):
             self.settings_window.check_updates_requested.connect(
-                self.check_for_updates
+                self.manual_check_for_updates
             )
 
         self.settings_window.show()
