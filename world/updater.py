@@ -61,6 +61,7 @@ class UpdateInstallWorker(QThread):
                 archive = download_verified_archive(
                     self.release,
                     Path(directory),
+                    self.report_download_progress,
                 )
 
                 if archive is None:
@@ -83,6 +84,14 @@ class UpdateInstallWorker(QThread):
 
         self.progress.emit(100, "Restarting ScreenBot...")
         self.installed.emit(str(entrypoint))
+
+    def report_download_progress(self, downloaded, total):
+        if total <= 0:
+            self.progress.emit(35, "Downloading update...")
+            return
+
+        percent = 10 + int(downloaded / total * 60)
+        self.progress.emit(percent, "Downloading update...")
 
 
 def parse_release(payload):
@@ -168,7 +177,7 @@ def verify_checksum(archive, checksums, filename):
     return hmac.compare_digest(actual, expected.lower())
 
 
-def download_verified_archive(release, directory):
+def download_verified_archive(release, directory, progress=None):
     archive_name = f"screenbot-{release.version}.zip"
 
     try:
@@ -180,6 +189,7 @@ def download_verified_archive(release, directory):
 
         archive = requests.get(
             release.archive_url,
+            stream=True,
             timeout=60,
         )
         archive.raise_for_status()
@@ -187,8 +197,20 @@ def download_verified_archive(release, directory):
         print("[UPDATE] Download failed:", error)
         return None
 
+    total = int(archive.headers.get("content-length", 0))
+    content = bytearray()
+
+    for chunk in archive.iter_content(chunk_size=65536):
+        if not chunk:
+            continue
+
+        content.extend(chunk)
+
+        if progress is not None:
+            progress(len(content), total)
+
     if not verify_checksum(
-        archive.content,
+        bytes(content),
         checksums.text,
         archive_name,
     ):
@@ -197,7 +219,7 @@ def download_verified_archive(release, directory):
 
     directory.mkdir(parents=True, exist_ok=True)
     archive_path = directory / archive_name
-    archive_path.write_bytes(archive.content)
+    archive_path.write_bytes(content)
     return archive_path
 
 
