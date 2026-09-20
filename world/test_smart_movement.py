@@ -482,5 +482,41 @@ class ScanCadenceTests(unittest.TestCase):
         self.assertEqual((10, 25), scan_delay_range("local", initial=False))
 
 
+class UpdatePollingTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.app = QApplication.instance() or QApplication([])
+
+    def test_pro_mode_polls_the_pages_manifest_every_five_minutes(self):
+        # Given: a Pro ScreenBot session.
+        bot = main_module.ScreenBot10("pro")
+
+        # When: startup configures the update checker.
+
+        # Then: the timer rechecks the GitHub Pages manifest every five minutes.
+        self.assertIsNotNone(bot.update_timer)
+        self.assertEqual(
+            5 * 60 * 1000,
+            bot.update_timer.interval(),
+        )
+
+        bot.close_confirmed = True
+        bot.close()
+        bot.walking_host.close()
+
+    def test_local_mode_does_not_create_an_update_timer(self):
+        # Given: a Local ScreenBot session.
+        bot = main_module.ScreenBot10("local")
+
+        # When: startup completes.
+
+        # Then: only Pro mode polls for paid update availability.
+        self.assertIsNone(bot.update_timer)
+
+        bot.close_confirmed = True
+        bot.close()
+        bot.walking_host.close()
+
+
 if __name__ == "__main__":
     unittest.main()
