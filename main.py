@@ -382,6 +382,9 @@ class ScreenBot10(ScreenBot):
             f"v{Path(__file__).with_name('VERSION').read_text().strip()}",
             self,
         )
+        self.current_version = Path(__file__).with_name(
+            "VERSION"
+        ).read_text().strip()
         self.version_badge.setStyleSheet(
             "QLabel { color:#00d99a; font-size:10px; font-weight:bold; }"
         )
@@ -481,9 +484,11 @@ class ScreenBot10(ScreenBot):
         if self.update_worker is not None and self.update_worker.isRunning():
             return
 
-        version_path = Path(__file__).with_name("VERSION")
-        current_version = version_path.read_text().strip()
-        self.update_worker = UpdateCheckWorker(current_version)
+        subprocess.run(
+            ["notify-send", "ScreenBot", "Checking for updates..."],
+            check=False,
+        )
+        self.update_worker = UpdateCheckWorker(self.current_version)
         self.update_worker.available.connect(self.offer_update)
         self.update_worker.start()
 

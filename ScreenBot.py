@@ -622,7 +622,7 @@ class SettingsWindow(QWidget):
 
         self.setFixedSize(
             390,
-            660,
+            740,
         )
 
         form = QFormLayout(self)
