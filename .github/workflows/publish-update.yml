@@ -1,0 +1,39 @@
+name: Publish ScreenBot Update
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build verified update archive
+        run: |
+          version="${GITHUB_REF_NAME}"
+          git archive --format=zip --prefix="screenbot-${version}/" HEAD > "screenbot-${version}.zip"
+          sha256sum "screenbot-${version}.zip" > SHA256SUMS
+          printf '{\n  "version": "%s",\n  "archive_url": "https://chenboda01.github.io/ScreenBot/updates/screenbot-%s.zip",\n  "checksum_url": "https://chenboda01.github.io/ScreenBot/updates/SHA256SUMS"\n}\n' "$version" "$version" > latest.json
+
+      - name: Publish update assets to Pages branch
+        run: |
+          git fetch origin screenbot-10
+          git checkout screenbot-10
+          mkdir -p updates
+          cp "screenbot-${GITHUB_REF_NAME}.zip" "updates/screenbot-${GITHUB_REF_NAME}.zip"
+          cp SHA256SUMS updates/SHA256SUMS
+          cp latest.json updates/latest.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add updates
+          git commit -m "Publish ScreenBot ${GITHUB_REF_NAME} update" || exit 0
+          git push origin screenbot-10
