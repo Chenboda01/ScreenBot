@@ -490,8 +490,10 @@ class UpdatePollingTests(unittest.TestCase):
     def test_pro_mode_polls_the_pages_manifest_every_five_minutes(self):
         # Given: a Pro ScreenBot session.
         bot = main_module.ScreenBot10("pro")
+        bot.settings["update_check_minutes"] = 5
 
         # When: startup configures the update checker.
+        bot.configure_update_timer()
 
         # Then: the timer rechecks the GitHub Pages manifest every five minutes.
         self.assertIsNotNone(bot.update_timer)

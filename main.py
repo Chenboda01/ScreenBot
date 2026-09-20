@@ -40,7 +40,6 @@ PRO_INITIAL_SCAN_RANGE = (2, 4)
 PRO_AWARENESS_SCAN_RANGE = (3, 5)
 LOCAL_INITIAL_SCAN_RANGE = (8, 18)
 LOCAL_AWARENESS_SCAN_RANGE = (10, 25)
-UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000
 
 
 def scan_delay_range(brain_mode, initial):
@@ -445,11 +444,7 @@ class ScreenBot10(ScreenBot):
         self.show_mini()
 
         if self.brain_mode == "pro":
-            self.update_timer = QTimer(self)
-            self.update_timer.timeout.connect(
-                self.check_for_updates
-            )
-            self.update_timer.start(UPDATE_CHECK_INTERVAL_MS)
+            self.configure_update_timer()
             QTimer.singleShot(1000, self.check_for_updates)
 
         print(
@@ -471,6 +466,17 @@ class ScreenBot10(ScreenBot):
         self.update_worker = UpdateCheckWorker(current_version)
         self.update_worker.available.connect(self.offer_update)
         self.update_worker.start()
+
+    def configure_update_timer(self):
+        if self.brain_mode != "pro":
+            return
+
+        if self.update_timer is None:
+            self.update_timer = QTimer(self)
+            self.update_timer.timeout.connect(self.check_for_updates)
+
+        minutes = int(self.settings.get("update_check_minutes", 5))
+        self.update_timer.start(minutes * 60 * 1000)
 
     def offer_update(self, release):
         subprocess.run(
@@ -934,6 +940,7 @@ class ScreenBot10(ScreenBot):
             self.panel_manual = False
 
         self.apply_panel_style()
+        self.configure_update_timer()
 
     def panel_step(self):
         current_x = self.control_panel.x()

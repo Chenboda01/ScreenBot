@@ -65,6 +65,7 @@ DEFAULT_SETTINGS = {
     "bot_name": "Bob",
     "panel_shape": "Circle",
     "panel_auto_move": "On",
+    "update_check_minutes": 5,
 }
 
 
@@ -754,6 +755,13 @@ class SettingsWindow(QWidget):
             )
         )
 
+        self.update_check_minutes = QSpinBox()
+        self.update_check_minutes.setRange(1, 60)
+        self.update_check_minutes.setSuffix(" min")
+        self.update_check_minutes.setValue(
+            int(settings.get("update_check_minutes", 5))
+        )
+
         form.addRow(
             "Theme:",
             self.theme,
@@ -819,6 +827,11 @@ class SettingsWindow(QWidget):
             self.panel_auto_move,
         )
 
+        form.addRow(
+            "Update checks:",
+            self.update_check_minutes,
+        )
+
         save_btn = QPushButton("SAVE")
         close_btn = QPushButton("CLOSE")
 
@@ -834,6 +847,12 @@ class SettingsWindow(QWidget):
         form.addRow(close_btn)
 
     def save_settings(self):
+        if (
+            self.update_check_minutes.value() < 3
+            and not self.confirm_short_update_interval()
+        ):
+            return
+
         data = {
             "theme": self.theme.currentText(),
             "background": self.background.currentText(),
@@ -848,6 +867,7 @@ class SettingsWindow(QWidget):
             "bot_name": self.bot_name.text().strip() or "Bob",
             "panel_shape": self.panel_shape.currentText(),
             "panel_auto_move": self.panel_auto_move.currentText(),
+            "update_check_minutes": self.update_check_minutes.value(),
         }
 
         save_json(
@@ -864,6 +884,39 @@ class SettingsWindow(QWidget):
         )
 
         self.close()
+
+    def confirm_short_update_interval(self):
+        subprocess.run(
+            [
+                "notify-send",
+                "ScreenBot",
+                "Checking for updates this often may use more CPU.",
+            ],
+            check=False,
+        )
+
+        dialog = QMessageBox(self)
+        dialog.setWindowTitle("Frequent update checks")
+        dialog.setText(
+            "Checking for updates in under three minutes may use more CPU."
+        )
+        yes_button = dialog.addButton(
+            "Yes, I'm sure.",
+            QMessageBox.ButtonRole.AcceptRole,
+        )
+        dialog.addButton(
+            "No, exit.",
+            QMessageBox.ButtonRole.RejectRole,
+        )
+        yes_button.setEnabled(False)
+        unlock_timer = QTimer(dialog)
+        unlock_timer.setSingleShot(True)
+        unlock_timer.timeout.connect(
+            lambda: yes_button.setEnabled(True)
+        )
+        unlock_timer.start(1000)
+        dialog.exec()
+        return dialog.clickedButton() is yes_button
 
 
 class ScreenBot(QWidget):
@@ -1616,6 +1669,10 @@ class ScreenBot(QWidget):
             "panel_auto_move": self.settings.get(
                 "panel_auto_move",
                 "On",
+            ),
+            "update_check_minutes": self.settings.get(
+                "update_check_minutes",
+                5,
             ),
         }
 
