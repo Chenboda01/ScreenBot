@@ -12,6 +12,7 @@ from PyQt6.QtCore import QProcess, Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QApplication,
     QLabel,
+    QLineEdit,
     QProgressBar,
     QPushButton,
     QWidget,
@@ -356,7 +357,11 @@ class ScreenBot10(ScreenBot):
         self.brain_badge = QLabel(
             "⚡ PRO"
             if brain_mode == "pro"
-            else "🏠 LOCAL",
+            else (
+                "⌨ TERMINAL"
+                if brain_mode == "terminal"
+                else "🏠 LOCAL"
+            ),
             self,
         )
 
@@ -422,6 +427,24 @@ class ScreenBot10(ScreenBot):
         self.update_timer = None
         self.install_worker = None
         self.update_progress = None
+        self.terminal_mode = brain_mode == "terminal"
+
+        self.terminal_status = QLabel(
+            "TERMINAL MODE • Every command needs approval",
+            self,
+        )
+        self.terminal_status.setStyleSheet(
+            "QLabel { color:#00d99a; font-size:11px; font-weight:bold; }"
+        )
+        self.command_preview = QLineEdit(self)
+        self.command_preview.setReadOnly(True)
+        self.command_preview.setPlaceholderText(
+            "Bob's proposed command will appear here"
+        )
+        self.run_command_btn = QPushButton("RUN COMMAND", self)
+        self.run_command_btn.setEnabled(False)
+        self.cancel_command_btn = QPushButton("CANCEL", self)
+        self.cancel_command_btn.setEnabled(False)
 
         self.control_panel = ControlPanel(
             self.bot_name()
@@ -607,6 +630,26 @@ class ScreenBot10(ScreenBot):
         )
         self.brain_badge.show()
         self.brain_badge.raise_()
+
+        terminal_widgets = [
+            self.terminal_status,
+            self.command_preview,
+            self.run_command_btn,
+            self.cancel_command_btn,
+        ]
+
+        if self.terminal_mode:
+            self.terminal_status.setGeometry(245, 218, 490, 24)
+            self.command_preview.setGeometry(245, 250, 490, 36)
+            self.run_command_btn.setGeometry(245, 298, 230, 36)
+            self.cancel_command_btn.setGeometry(505, 298, 230, 36)
+            self.chat.setGeometry(245, 350, 490, 170)
+
+            for widget in terminal_widgets:
+                widget.show()
+        else:
+            for widget in terminal_widgets:
+                widget.hide()
 
         if self.parent() is not self.walking_host:
             self.walking_host.attach_bob(
@@ -1119,7 +1162,7 @@ class BrainChoiceWindow(QWidget):
         self.bot = None
 
         self.setWindowTitle("ScreenBot 10")
-        self.setFixedSize(620, 360)
+        self.setFixedSize(620, 500)
 
         self.setStyleSheet(
             """
@@ -1190,9 +1233,9 @@ class BrainChoiceWindow(QWidget):
             self,
         )
         self.wifi_btn.setGeometry(
-            60,
+            45,
             180,
-            230,
+            160,
             120,
         )
 
@@ -1201,11 +1244,17 @@ class BrainChoiceWindow(QWidget):
             self,
         )
         self.local_btn.setGeometry(
-            330,
-            180,
             230,
+            180,
+            160,
             120,
         )
+
+        self.terminal_btn = QPushButton(
+            "⌨ TERMINAL\n\nApproval required",
+            self,
+        )
+        self.terminal_btn.setGeometry(415, 180, 160, 120)
 
         self.wifi_btn.clicked.connect(
             self.use_wifi
@@ -1213,6 +1262,9 @@ class BrainChoiceWindow(QWidget):
 
         self.local_btn.clicked.connect(
             self.use_local
+        )
+        self.terminal_btn.clicked.connect(
+            lambda: self.start_bob("terminal")
         )
 
     def use_wifi(self):
