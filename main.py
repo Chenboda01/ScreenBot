@@ -1,6 +1,7 @@
 from bot.brain import HybridBrain
 import os
 import random
+import re
 import signal
 import socket
 import subprocess
@@ -428,6 +429,7 @@ class ScreenBot10(ScreenBot):
         self.install_worker = None
         self.update_progress = None
         self.terminal_mode = brain_mode == "terminal"
+        self.terminal_process = None
 
         self.terminal_status = QLabel(
             "TERMINAL MODE • Every command needs approval",
@@ -443,8 +445,10 @@ class ScreenBot10(ScreenBot):
         )
         self.run_command_btn = QPushButton("RUN COMMAND", self)
         self.run_command_btn.setEnabled(False)
+        self.run_command_btn.clicked.connect(self.run_terminal_command)
         self.cancel_command_btn = QPushButton("CANCEL", self)
         self.cancel_command_btn.setEnabled(False)
+        self.cancel_command_btn.clicked.connect(self.cancel_terminal_command)
 
         self.control_panel = ControlPanel(
             self.bot_name()
@@ -631,26 +635,6 @@ class ScreenBot10(ScreenBot):
         self.brain_badge.show()
         self.brain_badge.raise_()
 
-        terminal_widgets = [
-            self.terminal_status,
-            self.command_preview,
-            self.run_command_btn,
-            self.cancel_command_btn,
-        ]
-
-        if self.terminal_mode:
-            self.terminal_status.setGeometry(245, 218, 490, 24)
-            self.command_preview.setGeometry(245, 250, 490, 36)
-            self.run_command_btn.setGeometry(245, 298, 230, 36)
-            self.cancel_command_btn.setGeometry(505, 298, 230, 36)
-            self.chat.setGeometry(245, 350, 490, 170)
-
-            for widget in terminal_widgets:
-                widget.show()
-        else:
-            for widget in terminal_widgets:
-                widget.hide()
-
         if self.parent() is not self.walking_host:
             self.walking_host.attach_bob(
                 self,
@@ -700,6 +684,21 @@ class ScreenBot10(ScreenBot):
 
         ScreenBot.show_expanded(self)
 
+        if self.terminal_mode:
+            self.terminal_status.setGeometry(245, 218, 490, 24)
+            self.command_preview.setGeometry(245, 250, 490, 36)
+            self.run_command_btn.setGeometry(245, 298, 230, 36)
+            self.cancel_command_btn.setGeometry(505, 298, 230, 36)
+            self.chat.setGeometry(245, 350, 490, 170)
+
+            for widget in [
+                self.terminal_status,
+                self.command_preview,
+                self.run_command_btn,
+                self.cancel_command_btn,
+            ]:
+                widget.show()
+
         self.brain_badge.setGeometry(
             245,
             14,
@@ -716,6 +715,55 @@ class ScreenBot10(ScreenBot):
         self.show()
         self.raise_()
         self.activateWindow()
+
+    def finish_reply(self, reply):
+        ScreenBot.finish_reply(self, reply)
+
+        if not self.terminal_mode:
+            return
+
+        match = re.search(r"```(?:[A-Za-z0-9_-]+)?\s*\n(.+?)```", reply, re.S)
+
+        if match is None:
+            return
+
+        self.command_preview.setText(match.group(1).strip())
+        self.run_command_btn.setEnabled(True)
+        self.cancel_command_btn.setEnabled(True)
+
+    def cancel_terminal_command(self):
+        self.command_preview.clear()
+        self.run_command_btn.setEnabled(False)
+        self.cancel_command_btn.setEnabled(False)
+
+    def run_terminal_command(self):
+        command = self.command_preview.text().strip()
+
+        if not command:
+            return
+
+        shell = os.environ.get("SHELL", "/bin/sh")
+        self.terminal_process = QProcess(self)
+        self.terminal_process.setWorkingDirectory(os.getcwd())
+        self.terminal_process.readyReadStandardOutput.connect(
+            self.append_terminal_output
+        )
+        self.terminal_process.readyReadStandardError.connect(
+            self.append_terminal_output
+        )
+        self.terminal_process.start(shell, ["-lc", command])
+        self.terminal_status.setText("TERMINAL MODE • Command running")
+        self.run_command_btn.setEnabled(False)
+
+    def append_terminal_output(self):
+        if self.terminal_process is None:
+            return
+
+        output = bytes(self.terminal_process.readAllStandardOutput()).decode()
+        output += bytes(self.terminal_process.readAllStandardError()).decode()
+
+        if output:
+            self.chat.append(f"<pre>{output}</pre>")
 
     def smart_walk_loop(self):
         if not self.screenbot10_ready:
