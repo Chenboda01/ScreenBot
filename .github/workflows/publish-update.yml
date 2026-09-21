@@ -20,7 +20,7 @@ jobs:
       - name: Build verified update archive
         run: |
           version="${GITHUB_REF_NAME}"
-          git archive --format=zip --prefix="screenbot-${version}/" HEAD > "screenbot-${version}.zip"
+          git archive --format=zip --prefix="screenbot-${version}/" HEAD -- . ':(exclude)updates' > "screenbot-${version}.zip"
           sha256sum "screenbot-${version}.zip" > SHA256SUMS
           printf '{\n  "version": "%s",\n  "archive_url": "https://chenboda01.github.io/ScreenBot/updates/screenbot-%s.zip",\n  "checksum_url": "https://chenboda01.github.io/ScreenBot/updates/SHA256SUMS"\n}\n' "$version" "$version" > latest.json
 

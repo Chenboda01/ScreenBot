@@ -2,6 +2,7 @@ from bot.brain import HybridBrain
 import os
 import random
 import re
+import shutil
 import signal
 import socket
 import subprocess
@@ -619,6 +620,10 @@ class ScreenBot10(ScreenBot):
             self.mini_btn,
             self.exit_btn,
             self.loading,
+            self.terminal_status,
+            self.command_preview,
+            self.run_command_btn,
+            self.cancel_command_btn,
             *self.expanded_only_widgets(),
         ]:
             widget.hide()
@@ -743,6 +748,30 @@ class ScreenBot10(ScreenBot):
             return
 
         shell = os.environ.get("SHELL", "/bin/sh")
+        terminal = (
+            shutil.which("xdg-terminal-exec")
+            or shutil.which("x-terminal-emulator")
+            or shutil.which("konsole")
+        )
+
+        if terminal is not None:
+            terminal_args = ["-e", shell, "-lc", command]
+
+            if terminal.endswith("xdg-terminal-exec"):
+                terminal_args = [shell, "-lc", command]
+
+            started = QProcess.startDetached(
+                terminal,
+                terminal_args,
+            )
+
+            if started:
+                self.terminal_status.setText(
+                    "TERMINAL MODE • Command opened in terminal"
+                )
+                self.run_command_btn.setEnabled(False)
+                return
+
         self.terminal_process = QProcess(self)
         self.terminal_process.setWorkingDirectory(os.getcwd())
         self.terminal_process.readyReadStandardOutput.connect(
