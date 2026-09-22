@@ -9,6 +9,7 @@ class WalkingHost(QWidget):
 
         self.bob = None
         self.panel = None
+        self.scene = None
         self.masked_region = None
         self.close_handler = None
 
@@ -57,6 +58,13 @@ class WalkingHost(QWidget):
 
         self.update_mask()
 
+    def attach_scene(self, scene):
+        self.scene = scene
+        scene.setParent(self)
+        scene.visibility_changed.connect(self.update_mask)
+        scene.hide()
+        self.update_mask()
+
     def move_bob(self, x, y=10):
         if self.bob is None:
             return
@@ -82,7 +90,7 @@ class WalkingHost(QWidget):
     def widget_rects(self):
         rects = []
 
-        for widget in (self.bob, self.panel):
+        for widget in (self.scene, self.bob, self.panel):
             if widget is None or not widget.isVisible():
                 continue
 
