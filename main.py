@@ -736,6 +736,17 @@ class ScreenBot10(ScreenBot):
         self.run_command_btn.setEnabled(True)
         self.cancel_command_btn.setEnabled(True)
 
+    def send_message(self):
+        message = self.input.text().lower()
+
+        if re.search(r"\b(run|execute|launch|terminal|command)\b", message):
+            self.terminal_mode = True
+
+            if self.expanded:
+                self.show_expanded()
+
+        ScreenBot.send_message(self)
+
     def cancel_terminal_command(self):
         self.command_preview.clear()
         self.run_command_btn.setEnabled(False)

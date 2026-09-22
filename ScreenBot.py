@@ -2,6 +2,7 @@ import sys
 import json
 import math
 import random
+import re
 import time
 import requests
 import subprocess
@@ -111,6 +112,33 @@ THINKING_TEXT = {
     "Extra High": "Think deeply and give your best concise answer.",
     "Pro": "Reason carefully internally, then give a polished answer without showing hidden reasoning.",
 }
+
+
+def basic_math_reply(message):
+    match = re.fullmatch(
+        r"\s*(\d+(?:\.\d+)?)\s*([+\-*/])\s*(\d+(?:\.\d+)?)\s*\??\s*",
+        message,
+    )
+
+    if match is None:
+        return None
+
+    left = float(match.group(1))
+    right = float(match.group(3))
+    operator = match.group(2)
+
+    if operator == "+":
+        result = left + right
+    elif operator == "-":
+        result = left - right
+    elif operator == "*":
+        result = left * right
+    elif right == 0:
+        return "I cannot divide by zero."
+    else:
+        result = left / right
+
+    return str(int(result) if result.is_integer() else result)
 
 
 def load_json(path, default):
@@ -2079,6 +2107,15 @@ class ScreenBot(QWidget):
                 "I will remember that.",
             )
 
+            self.set_state("happy")
+            return
+
+        math_reply = basic_math_reply(message)
+
+        if math_reply is not None:
+            self.chat.append(f"<b>{self.bot_name()}:</b> {math_reply}")
+            self.conversation.add_screenbot(math_reply)
+            self.store_message("screenbot", math_reply)
             self.set_state("happy")
             return
 
