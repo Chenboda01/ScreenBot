@@ -27,6 +27,7 @@ from ScreenBot import (
     SETTINGS_FILE,
     ScreenBot,
     load_json,
+    save_json,
 )
 from ui.prompts import ChoicePrompt
 from world.control_panel import ControlPanel
@@ -647,22 +648,14 @@ class ScreenBot10(ScreenBot):
         self.brain_badge.raise_()
 
         if self.parent() is not self.walking_host:
+            default_x = max(0, (self.walking_host.width() - self.width()) // 2)
+            default_y = max(0, (self.walking_host.height() - self.height()) // 2)
+            bob_x = int(self.settings.get("bob_x") or default_x)
+            bob_y = int(self.settings.get("bob_y") or default_y)
             self.walking_host.attach_bob(
                 self,
-                x=max(
-                    0,
-                    (
-                        self.walking_host.width()
-                        - self.width()
-                    ) // 2,
-                ),
-                y=max(
-                    0,
-                    (
-                        self.walking_host.height()
-                        - self.height()
-                    ) // 2,
-                ),
+                x=max(0, min(bob_x, self.walking_host.width() - self.width())),
+                y=max(0, min(bob_y, self.walking_host.height() - self.height())),
             )
 
             self.walking_host.attach_panel(
@@ -670,11 +663,21 @@ class ScreenBot10(ScreenBot):
             )
 
             self.place_panel(
-                self.x(),
-                self.y() + self.height() + 6,
+                int(self.settings.get("panel_x") or self.x()),
+                int(self.settings.get("panel_y") or self.y() + self.height() + 6),
             )
         else:
             self.show()
+
+    def remember_positions(self):
+        if self.parent() is not self.walking_host:
+            return
+
+        self.settings["bob_x"] = self.x()
+        self.settings["bob_y"] = self.y()
+        self.settings["panel_x"] = self.control_panel.x()
+        self.settings["panel_y"] = self.control_panel.y()
+        save_json(SETTINGS_FILE, self.settings_for_disk())
 
     def show_expanded(self):
         if not getattr(
@@ -684,6 +687,7 @@ class ScreenBot10(ScreenBot):
         ):
             return ScreenBot.show_expanded(self)
 
+        self.remember_positions()
         self.control_panel.hide()
 
         if self.parent() is self.walking_host:
@@ -1231,6 +1235,7 @@ class ScreenBot10(ScreenBot):
         if self.session_ending:
             return
 
+        self.remember_positions()
         self.session_ending = True
         self.close_confirmed = True
 

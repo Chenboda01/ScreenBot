@@ -68,6 +68,10 @@ DEFAULT_SETTINGS = {
     "panel_auto_move": "On",
     "update_check_minutes": 5,
     "separate_mode_chats": "Off",
+    "bob_x": None,
+    "bob_y": None,
+    "panel_x": None,
+    "panel_y": None,
 }
 
 
@@ -1729,6 +1733,10 @@ class ScreenBot(QWidget):
                 "separate_mode_chats",
                 "Off",
             ),
+            "bob_x": self.settings.get("bob_x"),
+            "bob_y": self.settings.get("bob_y"),
+            "panel_x": self.settings.get("panel_x"),
+            "panel_y": self.settings.get("panel_y"),
         }
 
     def toggle_mode(self):
