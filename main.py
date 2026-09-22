@@ -31,6 +31,7 @@ from ScreenBot import (
 )
 from ui.prompts import ChoicePrompt
 from world.control_panel import ControlPanel
+from world.destinations import DestinationScene
 from world.movement import MovementEngine
 from world.parking import ParkingEngine
 from world.vision import VisionEngine
@@ -438,6 +439,12 @@ class ScreenBot10(ScreenBot):
         self.update_progress = None
         self.terminal_mode = brain_mode == "terminal"
         self.terminal_process = None
+        self.destination_scene = DestinationScene()
+        self.destination_visit_timer = QTimer(self)
+        self.destination_visit_timer.setSingleShot(True)
+        self.destination_visit_timer.timeout.connect(
+            self.destination_scene.clear_destination
+        )
 
         self.terminal_status = QLabel(
             "TERMINAL MODE • Every command needs approval",
@@ -661,6 +668,9 @@ class ScreenBot10(ScreenBot):
             self.walking_host.attach_panel(
                 self.control_panel
             )
+            self.walking_host.attach_scene(
+                self.destination_scene
+            )
 
             self.place_panel(
                 int(self.settings.get("panel_x") or self.x()),
@@ -688,6 +698,8 @@ class ScreenBot10(ScreenBot):
             return ScreenBot.show_expanded(self)
 
         self.remember_positions()
+        self.destination_visit_timer.stop()
+        self.destination_scene.clear_destination()
         self.control_panel.hide()
 
         if self.parent() is self.walking_host:
@@ -971,6 +983,10 @@ class ScreenBot10(ScreenBot):
             target_local_x,
             target_local_y,
         )
+        self.start_destination_visit(
+            target_local_x,
+            target_local_y,
+        )
 
         if target_local_x > self.x():
             self.smart_movement.direction = 1
@@ -1109,6 +1125,29 @@ class ScreenBot10(ScreenBot):
             == "On"
         )
 
+    def destination_scenes_enabled(self):
+        return (
+            self.settings.get("destination_scenes", "On")
+            == "On"
+        )
+
+    def start_destination_visit(self, target_x, target_y):
+        if not self.destination_scenes_enabled():
+            return
+
+        destination = random.choice(
+            ["Home", "Grocery Store", "Desk", "Park"]
+        )
+        scene_x = target_x - 25
+        scene_y = target_y + self.height() - 108
+        self.destination_scene.show_destination(
+            destination,
+            scene_x,
+            scene_y,
+        )
+        self.walking_host.update_mask()
+        self.destination_visit_timer.start(10000)
+
     def settings_saved(self, settings):
         super().settings_saved(settings)
 
@@ -1124,6 +1163,10 @@ class ScreenBot10(ScreenBot):
 
         self.apply_panel_style()
         self.configure_update_timer()
+
+        if not self.destination_scenes_enabled():
+            self.destination_visit_timer.stop()
+            self.destination_scene.clear_destination()
 
     def panel_step(self):
         current_x = self.control_panel.x()
@@ -1220,6 +1263,8 @@ class ScreenBot10(ScreenBot):
         self.close_confirmed = True
 
         self.hide()
+        self.destination_visit_timer.stop()
+        self.destination_scene.clear_destination()
 
         if self.parent() is self.walking_host:
             self.walking_host.detach_bob(self)
@@ -1238,6 +1283,8 @@ class ScreenBot10(ScreenBot):
         self.remember_positions()
         self.session_ending = True
         self.close_confirmed = True
+        self.destination_visit_timer.stop()
+        self.destination_scene.clear_destination()
 
         self.hide()
         self.walking_host.hide()

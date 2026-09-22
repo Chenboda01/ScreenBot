@@ -68,6 +68,7 @@ DEFAULT_SETTINGS = {
     "panel_auto_move": "On",
     "update_check_minutes": 5,
     "separate_mode_chats": "Off",
+    "destination_scenes": "On",
     "bob_x": None,
     "bob_y": None,
     "panel_x": None,
@@ -655,7 +656,7 @@ class SettingsWindow(QWidget):
 
         self.setFixedSize(
             390,
-            740,
+            770,
         )
 
         form = QFormLayout(self)
@@ -802,6 +803,12 @@ class SettingsWindow(QWidget):
             settings.get("separate_mode_chats", "Off")
         )
 
+        self.destination_scenes = QComboBox()
+        self.destination_scenes.addItems(["On", "Off"])
+        self.destination_scenes.setCurrentText(
+            settings.get("destination_scenes", "On")
+        )
+
         form.addRow(
             "Theme:",
             self.theme,
@@ -872,6 +879,7 @@ class SettingsWindow(QWidget):
             self.update_check_minutes,
         )
         form.addRow("Separate mode chats:", self.separate_mode_chats)
+        form.addRow("Destination scenes:", self.destination_scenes)
 
         save_btn = QPushButton("SAVE")
         close_btn = QPushButton("CLOSE")
@@ -916,6 +924,7 @@ class SettingsWindow(QWidget):
             "panel_auto_move": self.panel_auto_move.currentText(),
             "update_check_minutes": self.update_check_minutes.value(),
             "separate_mode_chats": self.separate_mode_chats.currentText(),
+            "destination_scenes": self.destination_scenes.currentText(),
         }
 
         save_json(
@@ -1732,6 +1741,10 @@ class ScreenBot(QWidget):
             "separate_mode_chats": self.settings.get(
                 "separate_mode_chats",
                 "Off",
+            ),
+            "destination_scenes": self.settings.get(
+                "destination_scenes",
+                "On",
             ),
             "bob_x": self.settings.get("bob_x"),
             "bob_y": self.settings.get("bob_y"),
