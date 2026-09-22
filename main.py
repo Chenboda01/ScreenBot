@@ -355,6 +355,10 @@ class ScreenBot10(ScreenBot):
         self.settings["_session_brain_mode"] = brain_mode
 
         self.brain_mode = brain_mode
+        self.chats.configure_mode(
+            brain_mode,
+            self.settings.get("separate_mode_chats", "Off") == "On",
+        )
 
         self.brain_badge = QLabel(
             "⚡ PRO"
@@ -1101,6 +1105,13 @@ class ScreenBot10(ScreenBot):
 
     def settings_saved(self, settings):
         super().settings_saved(settings)
+
+        self.chats.configure_mode(
+            self.brain_mode,
+            settings.get("separate_mode_chats", "Off") == "On",
+        )
+        self.load_active_conversation()
+        self.refresh_chat_list()
 
         if self.auto_move_enabled():
             self.panel_manual = False

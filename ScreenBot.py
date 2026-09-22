@@ -67,6 +67,7 @@ DEFAULT_SETTINGS = {
     "panel_shape": "Circle",
     "panel_auto_move": "On",
     "update_check_minutes": 5,
+    "separate_mode_chats": "Off",
 }
 
 
@@ -791,6 +792,12 @@ class SettingsWindow(QWidget):
             int(settings.get("update_check_minutes", 5))
         )
 
+        self.separate_mode_chats = QComboBox()
+        self.separate_mode_chats.addItems(["Off", "On"])
+        self.separate_mode_chats.setCurrentText(
+            settings.get("separate_mode_chats", "Off")
+        )
+
         form.addRow(
             "Theme:",
             self.theme,
@@ -860,6 +867,7 @@ class SettingsWindow(QWidget):
             "Update checks:",
             self.update_check_minutes,
         )
+        form.addRow("Separate mode chats:", self.separate_mode_chats)
 
         save_btn = QPushButton("SAVE")
         close_btn = QPushButton("CLOSE")
@@ -903,6 +911,7 @@ class SettingsWindow(QWidget):
             "panel_shape": self.panel_shape.currentText(),
             "panel_auto_move": self.panel_auto_move.currentText(),
             "update_check_minutes": self.update_check_minutes.value(),
+            "separate_mode_chats": self.separate_mode_chats.currentText(),
         }
 
         save_json(
@@ -1715,6 +1724,10 @@ class ScreenBot(QWidget):
             "update_check_minutes": self.settings.get(
                 "update_check_minutes",
                 5,
+            ),
+            "separate_mode_chats": self.settings.get(
+                "separate_mode_chats",
+                "Off",
             ),
         }
 

@@ -74,7 +74,20 @@ class ChatStore:
         self.path = Path(path)
         self.chats = []
         self.active_id = None
+        self.mode = "shared"
+        self.separate_modes = False
         self.load()
+
+    def configure_mode(self, mode, separate_modes):
+        self.mode = mode
+        self.separate_modes = separate_modes
+        self.active_id = None
+
+    def belongs_to_current_mode(self, chat):
+        if not self.separate_modes:
+            return True
+
+        return chat.get("mode", "shared") in {"shared", self.mode}
 
     def load(self):
         self.chats = []
@@ -161,6 +174,7 @@ class ChatStore:
                 else 0.0
             ),
             "renamed": bool(item.get("renamed", False)),
+            "mode": item.get("mode", "shared"),
         }
 
     def save(self):
@@ -175,7 +189,7 @@ class ChatStore:
 
     def get(self, chat_id):
         for chat in self.chats:
-            if chat["id"] == chat_id:
+            if chat["id"] == chat_id and self.belongs_to_current_mode(chat):
                 return chat
 
         return None
@@ -188,7 +202,7 @@ class ChatStore:
 
     def ordered(self):
         return sorted(
-            self.chats,
+            [chat for chat in self.chats if self.belongs_to_current_mode(chat)],
             key=lambda chat: chat["updated"],
             reverse=True,
         )
@@ -215,6 +229,7 @@ class ChatStore:
             "created": now,
             "updated": now,
             "renamed": False,
+            "mode": self.mode if self.separate_modes else "shared",
         }
 
         self.chats.append(chat)
