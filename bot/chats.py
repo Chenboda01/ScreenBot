@@ -317,3 +317,29 @@ class ChatStore:
         self.save()
 
         return True
+
+    def copy_to_mode(self, source_modes, target_mode, chat_ids=None):
+        now = time.time()
+        copied = []
+
+        for chat in self.chats:
+            if chat.get("mode", "shared") not in source_modes:
+                continue
+
+            if chat_ids is not None and chat["id"] not in chat_ids:
+                continue
+
+            clone = {
+                **chat,
+                "id": uuid.uuid4().hex,
+                "created": now,
+                "updated": now,
+                "mode": target_mode,
+            }
+            self.chats.append(clone)
+            copied.append(clone)
+
+        if copied:
+            self.save()
+
+        return copied

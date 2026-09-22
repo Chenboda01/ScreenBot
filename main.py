@@ -15,6 +15,8 @@ from PyQt6.QtWidgets import (
     QApplication,
     QLabel,
     QLineEdit,
+    QInputDialog,
+    QMessageBox,
     QProgressBar,
     QPushButton,
     QWidget,
@@ -1438,7 +1440,65 @@ class BrainChoiceWindow(QWidget):
             brain_mode=brain_mode
         )
 
+        if self.bot.settings.get("separate_mode_chats") == "On":
+            self.restore_mode_chats(brain_mode)
+
         self.hide()
+
+    def restore_mode_chats(self, target_mode):
+        answer = QMessageBox.question(
+            self,
+            "Restore chats",
+            "Restore chats from another mode?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+
+        sources = [mode for mode in ["local", "pro", "terminal"] if mode != target_mode]
+        labels = [source.title() for source in sources] + ["Both"]
+        choice, accepted = QInputDialog.getItem(
+            self,
+            "Restore chats",
+            "From where?",
+            labels,
+            0,
+            False,
+        )
+
+        if not accepted:
+            return
+
+        selected_sources = sources if choice == "Both" else [choice.lower()]
+        chats = [
+            chat
+            for chat in self.bot.chats.chats
+            if chat.get("mode", "shared") in selected_sources
+        ]
+
+        if not chats:
+            return
+
+        options = ["All chats"] + [chat["title"] for chat in chats]
+        selected, accepted = QInputDialog.getItem(
+            self,
+            "Restore chats",
+            "Which chats?",
+            options,
+            0,
+            False,
+        )
+
+        if not accepted:
+            return
+
+        ids = None if selected == "All chats" else [
+            chat["id"] for chat in chats if chat["title"] == selected
+        ]
+        self.bot.chats.copy_to_mode(selected_sources, target_mode, ids)
+        self.bot.refresh_chat_list()
 
 
 class StartupWindow(QWidget):
